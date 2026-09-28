@@ -9,12 +9,14 @@ El sistema tiene dos perfiles: **Secretario** y **Estudiante**.
 ## Las 5 reglas que no se rompen
 
 1. **Nunca** pushear directo a `development`, `testing` ni `production`.
-2. **Nunca** subir `node_modules/` ni `dist/`. Se generan solos.
+2. **Nunca** subir `node_modules/`, `dist/`, `bin/` ni `obj/`. Se generan solos.
 3. **Nunca** usar `git push --force`. Le rompe el repositorio a todos.
-4. Antes de abrir un Pull Request, `npm run build` tiene que pasar sin errores.
+4. Antes de abrir un Pull Request, `npm run build` tiene que pasar sin errores. Si tocaste el backend, también `dotnet build`.
 5. Los conflictos los resolvés **en tu rama**, en tu máquina. No con el botón de GitHub.
 
-## Arrancar en 3 pasos
+---
+
+## Arrancar el frontend en 3 pasos
 
 ```bash
 git clone https://github.com/gonzaleztomi1978-design/Sistema-Academico.git
@@ -29,14 +31,98 @@ Todavía no hay login. Para cambiar entre Secretario y Estudiante usá el **simu
 
 ---
 
+## Base de datos y backend
+
+### Qué necesitás instalar
+
+- **SQL Server Express** y **SQL Server Management Studio**.
+- **.NET 10 SDK**: https://dotnet.microsoft.com/download/dotnet/10.0
+
+### 1. Crear la base en tu computadora
+
+Cada uno tiene su propia copia de la base. Se crea con el script del repositorio:
+
+1. Abrí Management Studio y conectate a `localhost\SQLEXPRESS` con **Windows Authentication**.
+2. Abrí el archivo `database/AcademicSystem.sql` y apretá **F5**.
+
+Se crea la base `AcademicSystem` con sus 22 tablas. Si el script cambia, lo volvés a correr: no borra nada ni duplica datos.
+
+### 2. Levantar el backend
+
+```bash
+cd backend
+dotnet run --project AcademicSystem.Api
+```
+
+Queda en **http://localhost:5000**. Para comprobar que se conectó a la base, abrí en el navegador:
+
+**http://localhost:5000/api/health**
+
+Tiene que mostrar `"status":"ok"` y `"roles":4`.
+
+### Cómo se conecta a la base
+
+La conexión está en `backend/AcademicSystem.Api/appsettings.json`:
+
+```json
+"ConnectionStrings": {
+  "AcademicSystem": "Server=localhost\\SQLEXPRESS;Database=AcademicSystem;Trusted_Connection=True;TrustServerCertificate=True"
+}
+```
+
+En ese archivo la barra va doble: `localhost\\SQLEXPRESS`.
+
+**Si tu SQL Server tiene otro nombre**, no cambies ese archivo. Guardá tu conexión solo en tu computadora con este comando, cambiando la parte de `Server`:
+
+```bash
+cd backend
+dotnet user-secrets set "ConnectionStrings:AcademicSystem" "Server=localhost;Database=AcademicSystem;Trusted_Connection=True;TrustServerCertificate=True" --project AcademicSystem.Api
+```
+
+El nombre de tu servidor es el que ponés en **Server name** cuando te conectás desde Management Studio.
+
+### 3. Conectar el frontend con el backend
+
+Creá un archivo `.env.local` en la raíz del proyecto, al lado de `package.json`, con esta línea:
+
+```
+VITE_API_BASE_URL=http://localhost:5000
+```
+
+Después reiniciá `npm run dev`. Ese archivo no se sube al repositorio.
+
+Hoy las pantallas usan datos simulados. Cuando un equipo pase su pantalla a datos reales, llama a la API con `request('/api/...')` de `src/api/httpClient.js`.
+
+### Cómo está armado el backend
+
+```
+backend/
+├── AcademicSystem.Api/             → endpoints (controllers) y configuración
+├── AcademicSystem.Application/     → la lógica de cada funcionalidad (servicios)
+├── AcademicSystem.Domain/Entities/ → una clase por cada tabla de la base
+└── AcademicSystem.Infrastructure/  → la conexión a la base (AcademicSystemContext)
+```
+
+Las clases de `Domain/Entities` se generan automáticamente desde la base, con los mismos nombres de tablas y columnas. **No las edites a mano.** Si la base cambia, se acuerda en la Mesa Técnica, se actualiza el script y el E1 las vuelve a generar con este comando:
+
+```bash
+cd backend
+dotnet tool restore
+dotnet ef dbcontext scaffold "Name=ConnectionStrings:AcademicSystem" Microsoft.EntityFrameworkCore.SqlServer --project AcademicSystem.Infrastructure --startup-project AcademicSystem.Api --context AcademicSystemContext --context-dir Data --context-namespace AcademicSystem.Infrastructure.Data --output-dir ../AcademicSystem.Domain/Entities --namespace AcademicSystem.Domain.Entities --no-onconfiguring --force
+```
+
+---
+
 ## Comandos que vas a usar
 
 | Comando | Para qué |
 |---|---|
-| `npm run dev` | Levantar el proyecto mientras trabajás. |
-| `npm run build` | Compilar. **Tiene que pasar antes de abrir un Pull Request.** |
+| `npm run dev` | Levantar el frontend mientras trabajás. |
+| `npm run build` | Compilar el frontend. **Tiene que pasar antes de abrir un Pull Request.** |
 | `npm run lint` | Ver problemas de estilo del código. |
 | `npm test` | Correr los tests. |
+| `dotnet run --project AcademicSystem.Api` | Levantar el backend, parado en `backend/`. |
+| `dotnet build` | Compilar el backend, parado en `backend/`. |
 
 ---
 
@@ -60,7 +146,9 @@ src/
 | **E3** — Gestión Académica | Planes de estudio, materias, correlatividades | `e3` | `src/modules/secretario/pages/PlanesEstudio/` |
 | **E4** — Inscripciones | Consulta de materias e inscripción a 2.º y 3.º | `e4` | `src/modules/estudiante/pages/Inscripciones/` |
 
-Cada equipo crea sus pantallas **en su propia carpeta**. Los archivos compartidos se tocan solo para agregar lo propio, nunca para cambiar lo de otro.
+En el backend, cada equipo agrega sus endpoints en `backend/AcademicSystem.Api/Controllers/` y su lógica en `backend/AcademicSystem.Application/`.
+
+Cada equipo crea su código **en su propia carpeta**. Los archivos compartidos se tocan solo para agregar lo propio, nunca para cambiar lo de otro.
 
 ---
 
@@ -113,10 +201,6 @@ Guía completa, con los conflictos típicos y cómo salir de cada problema: [doc
 
 ---
 
-
-
----
-
 ## Documentación
 
 **De la cátedra**
@@ -131,8 +215,3 @@ Guía completa, con los conflictos típicos y cómo salir de cada problema: [doc
 - [flujo-git.md](documentos/flujo-git.md) — trabajo diario de los equipos.
 - [integracion-y-releases.md](documentos/integracion-y-releases.md) — cómo integra y promueve el E1.
 - [configuracion-github.md](documentos/configuracion-github.md) — configuración del repositorio en GitHub.
-
----
-
-
-
