@@ -130,7 +130,7 @@ Y en **Branch rules**, tildá:
 - **Require a pull request before merging**, con **Required approvals: 1**.
 - **Require status checks to pass**, y agregá el check del CI.
 
-> **Sobre el check de CI.** El workflow está en `.github/workflows/ci.yml` y define un job llamado **`Compilar el proyecto (React + Vite)`**. Buscalo por ese nombre exacto. **Pero ojo:** GitHub solo lista los checks que ya vio correr al menos una vez, así que si todavía no aparece, dejá la opción destildada, terminá el resto del ruleset y volvé después.
+> **Sobre el check de CI.** El workflow está en `.github/workflows/ci.yml` y define dos jobs: **`Compilar el proyecto (React + Vite)`** y **`Compilar el backend (.NET 10)`**. Agregá los dos, buscándolos por ese nombre exacto. **Pero ojo:** GitHub solo lista los checks que ya vio correr al menos una vez, así que si todavía no aparece, dejá la opción destildada, terminá el resto del ruleset y volvé después.
 
 > **No podés aprobar tu propio PR.** GitHub no te deja dar *Approve* en un PR que abriste vos. Como las promociones las abre el E1, con **Required approvals: 1** necesitás que otra persona apruebe. Resolvelo así: que las abra un integrante del E1 y las apruebe otro. Si el E1 es una sola persona, tenés dos opciones honestas: que apruebe la profesora, o bajar **Required approvals a 0** dejando igual el *Require a pull request*. Lo que **no** hay que hacer es meterse en la *Bypass list*, porque eso desactiva todas las reglas para vos.
 

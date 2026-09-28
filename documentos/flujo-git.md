@@ -182,7 +182,15 @@ Parado en la raíz del repositorio:
 npm run build
 ```
 
-Tiene que terminar sin errores. Si falla, arreglalo ahora: no sirve de nada subir algo que no compila.
+Si tocaste el backend, compilalo también:
+
+```bash
+cd backend
+dotnet build
+cd ..
+```
+
+Los dos tienen que terminar sin errores. Si alguno falla, arreglalo ahora: no sirve de nada subir algo que no compila.
 
 ```bash
 git push origin e2
@@ -221,14 +229,15 @@ Cuando la funcionalidad está terminada, compila y la probaste a mano, se abre e
 
 ### Los checks automáticos
 
-Apenas abrís el PR, y también en cada push a tu rama, GitHub corre solo el workflow de integración continua. Instala las dependencias, pasa el lint, corre los tests y compila.
+Apenas abrís el PR, y también en cada push a tu rama, GitHub corre solo el workflow de integración continua. Tiene dos partes que corren en paralelo: una compila el frontend y la otra el backend.
 
 | Paso | ¿Bloquea? |
 |---|---|
-| Instalar dependencias (`npm ci`) | Sí |
-| Lint (ESLint) | No, pero miralo y arreglalo |
-| Tests (Vitest) | Sí |
-| Compilar (`npm run build`) | Sí |
+| Frontend: instalar dependencias (`npm ci`) | Sí |
+| Frontend: lint (ESLint) | No, pero miralo y arreglalo |
+| Frontend: tests (Vitest) | Sí |
+| Frontend: compilar (`npm run build`) | Sí |
+| Backend: compilar la solución (`dotnet build`) | Sí |
 
 Si un check sale en rojo, el PR no se mergea: abrí **Details**, leé en qué paso falló, corregí en tu rama y volvé a pushear. El PR se actualiza solo.
 
@@ -248,6 +257,7 @@ Después de que te mergearon el PR, volvé al Paso 2 para bajar a tu rama lo que
 - [ ] Estoy parado en la rama de mi equipo (`git branch --show-current`).
 - [ ] Hice `git fetch origin` y `git merge origin/development`, y no quedaron conflictos.
 - [ ] `npm run build` pasa sin errores.
+- [ ] Si toqué el backend, `dotnet build` (parado en `backend/`) pasa sin errores.
 - [ ] Probé la funcionalidad a mano en el navegador.
 - [ ] Mis commits tienen el prefijo del equipo.
 - [ ] No subí `node_modules/`, `dist/` ni archivos `.env`.
@@ -399,7 +409,7 @@ Cerrá siempre con `npm run build`.
 4. **Nunca** subas claves ni archivos `.env`.
 5. **Nunca** toques archivos de otro equipo sin avisar. Los compartidos se tocan solo para agregar lo tuyo.
 6. **Siempre** `git fetch origin` y `git merge origin/development` antes de arrancar algo nuevo.
-7. **Siempre** `npm run build` antes de abrir un PR.
+7. **Siempre** `npm run build` antes de abrir un PR, y `dotnet build` si tocaste el backend.
 8. Si algo no te cierra, preguntá antes de ejecutar. Un comando mal tirado le cuesta la tarde a los cuatro equipos.
 
 ---

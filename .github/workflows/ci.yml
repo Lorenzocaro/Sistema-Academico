@@ -1,5 +1,5 @@
 # Workflow de integración continua del Sistema Académico.
-# Verifica que el proyecto instale, pase los tests y compile antes de mergear.
+# Verifica que el frontend y el backend compilen antes de mergear.
 #
 # Ojo con algo que confunde la primera vez: GitHub lee este archivo desde la rama involucrada.
 # Para que corra en los PR hacia development, el archivo tiene que estar también en development;
@@ -70,3 +70,26 @@ jobs:
       # Compila el proyecto con Vite. Si esto falla, el PR no se mergea.
       - name: Compilar
         run: npm run build
+
+  backend:
+    name: Compilar el backend (.NET 10)
+    # Corre en paralelo al job del frontend: son independientes.
+    runs-on: ubuntu-latest
+    steps:
+      # Descarga el código del repositorio dentro de la máquina virtual.
+      - name: Checkout del repositorio
+        uses: actions/checkout@v4
+
+      # Instala el SDK de .NET 10, el mismo que usamos localmente.
+      - name: Instalar .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      # Baja los paquetes NuGet de los 4 proyectos de la solución.
+      - name: Restaurar dependencias
+        run: dotnet restore backend/AcademicSystem.sln
+
+      # Compila en Release. No necesita SQL Server: solo compila, no se conecta a la base.
+      - name: Compilar la solución
+        run: dotnet build backend/AcademicSystem.sln --configuration Release --no-restore
