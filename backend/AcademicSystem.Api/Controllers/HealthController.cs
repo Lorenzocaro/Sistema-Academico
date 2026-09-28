@@ -1,6 +1,6 @@
-using AcademicSystem.Infrastructure.Data;
+using AcademicSystem.Business.Services;
+using AcademicSystem.Entities.DTOs;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
 namespace AcademicSystem.Api.Controllers;
 
@@ -10,24 +10,15 @@ namespace AcademicSystem.Api.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/health")]
-public class HealthController(AcademicSystemContext context) : ControllerBase
+public class HealthController(IHealthService healthService) : ControllerBase
 {
     [HttpGet]
-    public async Task<IActionResult> Get(CancellationToken cancellationToken)
+    public async Task<ActionResult<HealthResponseDto>> Get(CancellationToken cancellationToken)
     {
-        if (!await context.Database.CanConnectAsync(cancellationToken))
-        {
-            return StatusCode(StatusCodes.Status503ServiceUnavailable,
-                new { status = "error", database = "unreachable" });
-        }
+        var result = await healthService.CheckAsync(cancellationToken);
 
-        var roles = await context.Roles.CountAsync(cancellationToken);
-
-        return Ok(new
-        {
-            status = "ok",
-            database = context.Database.GetDbConnection().Database,
-            roles,
-        });
+        return result.Status == "ok"
+            ? Ok(result)
+            : StatusCode(StatusCodes.Status503ServiceUnavailable, result);
     }
 }

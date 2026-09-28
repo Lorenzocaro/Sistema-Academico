@@ -16,8 +16,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\AcademicSystem.Application\AcademicSystem.Application.csproj" />
-    <ProjectReference Include="..\AcademicSystem.Infrastructure\AcademicSystem.Infrastructure.csproj" />
+    <ProjectReference Include="..\AcademicSystem.Business\AcademicSystem.Business.csproj" />
+    <ProjectReference Include="..\AcademicSystem.Data\AcademicSystem.Data.csproj" />
   </ItemGroup>
 
 </Project>

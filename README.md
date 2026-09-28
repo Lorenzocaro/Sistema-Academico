@@ -97,18 +97,22 @@ Hoy las pantallas usan datos simulados. Cuando un equipo pase su pantalla a dato
 
 ```
 backend/
-├── AcademicSystem.Api/             → endpoints (controllers) y configuración
-├── AcademicSystem.Application/     → la lógica de cada funcionalidad (servicios)
-├── AcademicSystem.Domain/Entities/ → una clase por cada tabla de la base
-└── AcademicSystem.Infrastructure/  → la conexión a la base (AcademicSystemContext)
+├── AcademicSystem.Api/                 → endpoints (Controllers) y configuración
+├── AcademicSystem.Business/Services/   → la lógica de cada funcionalidad
+├── AcademicSystem.Data/Context/        → la conexión a la base (AcademicSystemContext)
+└── AcademicSystem.Entities/
+    ├── DTOs/                           → lo que la API recibe y devuelve
+    └── Models/                         → una clase por cada tabla de la base
 ```
 
-Las clases de `Domain/Entities` se generan automáticamente desde la base, con los mismos nombres de tablas y columnas. **No las edites a mano.** Si la base cambia, se acuerda en la Mesa Técnica, se actualiza el script y el E1 las vuelve a generar con este comando:
+Cada funcionalidad recorre las cuatro capas en el mismo orden: el controller llama a un servicio, el servicio usa el contexto, y el contexto trabaja con los models. La API devuelve DTOs, nunca los models directamente. El ejemplo para copiar es el de `/api/health`: `HealthController`, `HealthService` y `HealthResponseDto`.
+
+Las clases de `Entities/Models` y el contexto se generan automáticamente desde la base, con los mismos nombres de tablas y columnas. **No los edites a mano.** Si la base cambia, se acuerda en la Mesa Técnica, se actualiza el script y el E1 los vuelve a generar con este comando:
 
 ```bash
 cd backend
 dotnet tool restore
-dotnet ef dbcontext scaffold "Name=ConnectionStrings:AcademicSystem" Microsoft.EntityFrameworkCore.SqlServer --project AcademicSystem.Infrastructure --startup-project AcademicSystem.Api --context AcademicSystemContext --context-dir Data --context-namespace AcademicSystem.Infrastructure.Data --output-dir ../AcademicSystem.Domain/Entities --namespace AcademicSystem.Domain.Entities --no-onconfiguring --force
+dotnet ef dbcontext scaffold "Name=ConnectionStrings:AcademicSystem" Microsoft.EntityFrameworkCore.SqlServer --project AcademicSystem.Data --startup-project AcademicSystem.Api --context AcademicSystemContext --context-dir Context --context-namespace AcademicSystem.Data.Context --output-dir ../AcademicSystem.Entities/Models --namespace AcademicSystem.Entities.Models --no-onconfiguring --force
 ```
 
 ---
@@ -146,7 +150,7 @@ src/
 | **E3** — Gestión Académica | Planes de estudio, materias, correlatividades | `e3` | `src/modules/secretario/pages/PlanesEstudio/` |
 | **E4** — Inscripciones | Consulta de materias e inscripción a 2.º y 3.º | `e4` | `src/modules/estudiante/pages/Inscripciones/` |
 
-En el backend, cada equipo agrega sus endpoints en `backend/AcademicSystem.Api/Controllers/` y su lógica en `backend/AcademicSystem.Application/`.
+En el backend, cada equipo agrega sus endpoints en `backend/AcademicSystem.Api/Controllers/`, su lógica en `backend/AcademicSystem.Business/Services/` y sus DTOs en `backend/AcademicSystem.Entities/DTOs/`. Cada servicio nuevo se registra con una línea en `Program.cs`, como `HealthService`.
 
 Cada equipo crea su código **en su propia carpeta**. Los archivos compartidos se tocan solo para agregar lo propio, nunca para cambiar lo de otro.
 

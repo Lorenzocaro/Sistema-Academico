@@ -1,13 +1,17 @@
-using AcademicSystem.Infrastructure.Data;
+using AcademicSystem.Business.Services;
+using AcademicSystem.Data.Context;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Database: the connection string lives in appsettings.json under "ConnectionStrings:AcademicSystem".
+// Data: the connection string lives in appsettings.json under "ConnectionStrings:AcademicSystem".
 var connectionString = builder.Configuration.GetConnectionString("AcademicSystem")
     ?? throw new InvalidOperationException("Missing connection string 'AcademicSystem' in appsettings.json.");
 
 builder.Services.AddDbContext<AcademicSystemContext>(options => options.UseSqlServer(connectionString));
+
+// Business: each team registers its services here, one line per service.
+builder.Services.AddScoped<IHealthService, HealthService>();
 
 // Lets the React frontend (Vite, http://localhost:5173) call this API.
 const string FrontendCorsPolicy = "Frontend";
