@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Plus, Search, X } from 'lucide-react';
 import PlanCard from './PlanCard';
+import CrearPlanModal from './CrearPlanModal';
 import { plansApi } from '../../components/plans/plansApi';
 import { useAsyncResource } from '../../../../hooks/useAsyncResource';
 
@@ -8,6 +9,7 @@ function PlanesEstudio() {
   const { data: planes, setData: setPlanes, isLoading, error } = useAsyncResource(plansApi.obtenerPlanes, []);
   const [searchTerm, setSearchTerm] = useState('');
   const [notice, setNotice] = useState('');
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const filteredPlans = useMemo(() => {
     const normalizedSearch = searchTerm.trim().toLowerCase();
@@ -15,10 +17,11 @@ function PlanesEstudio() {
     return planes.filter((plan) => plan.nombre.toLowerCase().includes(normalizedSearch));
   }, [planes, searchTerm]);
 
-  const createPlan = async () => {
-    const newPlan = await plansApi.crearPlan({ nombre: 'Nuevo plan académico', añoInicio: 2026, añoFin: 2029, activo: true });
+  const handleCreatePlan = async (formData) => {
+    const newPlan = await plansApi.crearPlan(formData);
     setPlanes((currentPlans) => [newPlan, ...currentPlans]);
     setNotice(`Se creó el plan "${newPlan.nombre}".`);
+    setIsModalOpen(false);
   };
 
   const editPlan = (planId) => {
@@ -63,7 +66,7 @@ function PlanesEstudio() {
             {planes.map((plan) => <option key={plan.id} value={plan.nombre} />)}
           </datalist>
         </label>
-        <button className="create-plan-button" type="button" onClick={createPlan}><Plus size={18} /> Crear Nuevo Plan</button>
+        <button className="create-plan-button" type="button" onClick={() => setIsModalOpen(true)}><Plus size={18} /> Crear Nuevo Plan</button>
       </div>
 
       {notice && <div className="planes-notice" role="status">{notice}<button type="button" aria-label="Cerrar aviso" onClick={() => setNotice('')}><X size={16} /></button></div>}
@@ -74,6 +77,8 @@ function PlanesEstudio() {
       </div>}
 
       {filteredPlans.length === 0 && <p className="plans-empty">No se encontraron planes de estudio.</p>}
+
+      {isModalOpen && <CrearPlanModal onClose={() => setIsModalOpen(false)} onCreate={handleCreatePlan} />}
     </section>
   );
 }
