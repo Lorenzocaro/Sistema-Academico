@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { Plus, Search, X } from 'lucide-react';
 import PlanCard from './PlanCard';
 import CrearPlanModal from './CrearPlanModal';
+import PlanDetalle from './PlanDetalle';
 import { plansApi } from '../../components/plans/plansApi';
 import { useAsyncResource } from '../../../../hooks/useAsyncResource';
 
@@ -10,12 +11,18 @@ function PlanesEstudio() {
   const [searchTerm, setSearchTerm] = useState('');
   const [notice, setNotice] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedPlanId, setSelectedPlanId] = useState(null);
 
   const filteredPlans = useMemo(() => {
     const normalizedSearch = searchTerm.trim().toLowerCase();
     if (!normalizedSearch) return planes;
     return planes.filter((plan) => plan.nombre.toLowerCase().includes(normalizedSearch));
   }, [planes, searchTerm]);
+
+  const selectedPlan = useMemo(
+    () => planes.find((plan) => plan.id === selectedPlanId) ?? null,
+    [planes, selectedPlanId]
+  );
 
   const handleCreatePlan = async (formData) => {
     const newPlan = await plansApi.crearPlan(formData);
@@ -44,9 +51,12 @@ function PlanesEstudio() {
   };
 
   const viewSubjects = (planId) => {
-    const plan = planes.find((currentPlan) => currentPlan.id === planId);
-    if (plan) setNotice(`Materias y correlatividades del plan ${plan.id}: ${plan.nombre}.`);
+    setSelectedPlanId(planId);
   };
+
+  if (selectedPlan) {
+    return <PlanDetalle plan={selectedPlan} onBack={() => setSelectedPlanId(null)} />;
+  }
 
   return (
     <section className="planes-page">
