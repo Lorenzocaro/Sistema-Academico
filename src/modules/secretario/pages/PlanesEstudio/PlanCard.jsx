@@ -2,7 +2,6 @@ import { Pencil, Power, Trash2 } from 'lucide-react';
 
 /**
  * Tarjeta reutilizable para un plan de estudio.
- * @param {{ id: number, nombre: string, codigo: string, añoInicio: number, añoFin: number, duracion: string, modalidad: string, cargaHoraria: string, regimen: string, activo: boolean }} plan
  */
 function PlanCard({ plan, onEdit, onToggleStatus, onDelete, onViewSubjects }) {
   const { id, nombre, codigo, añoInicio, añoFin, duracion, modalidad, cargaHoraria, regimen, activo } = plan;
@@ -33,19 +32,19 @@ function PlanCard({ plan, onEdit, onToggleStatus, onDelete, onViewSubjects }) {
         <div className="plan-card-details">
           <div className="plan-card-detail">
             <span className="detail-label">Duración</span>
-            <span className="detail-value">{duracion}</span>
+            <span className="detail-value">{duracion ?? '—'}</span>
           </div>
           <div className="plan-card-detail">
             <span className="detail-label">Modalidad</span>
-            <span className="detail-value">{modalidad}</span>
+            <span className="detail-value">{modalidad ?? '—'}</span>
           </div>
           <div className="plan-card-detail">
             <span className="detail-label">Carga Horaria</span>
-            <span className="detail-value">{cargaHoraria}</span>
+            <span className="detail-value">{cargaHoraria ?? '—'}</span>
           </div>
           <div className="plan-card-detail">
             <span className="detail-label">Régimen de cursado</span>
-            <span className="detail-value">{regimen}</span>
+            <span className="detail-value">{regimen ?? '—'}</span>
           </div>
         </div>
       </div>
