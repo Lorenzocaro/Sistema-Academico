@@ -3,8 +3,7 @@ import { ChevronRight, FileText, Pencil, Plus, Trash2 } from 'lucide-react';
 import CargarMaterias from './LoadSubjects';
 import EditSubjectModal from './EditSubjectModal';
 import ConfirmCorrelativesModal from './ConfirmCorrelativesModal';
-import { plansApi } from '../../components/plans/plansApi';
-import { useAsyncResource } from '../../../../hooks/useAsyncResource';
+import EditPlanModal from './EditPlanModal';
 
 const tabs = ['Resumen', 'Materias', 'Materias por año', 'Correlatividades'];
 const YEARS = ['1°', '2°', '3°'];
@@ -22,15 +21,13 @@ function Field({ label, value }) {
   );
 }
 
-function PlanDetalle({ plan, onBack }) {
+function PlanDetalle({ plan, onBack, onUpdatePlan }) {
   const [activeTab, setActiveTab] = useState('Resumen');
   const [isLoadingSubjects, setIsLoadingSubjects] = useState(false);
-  const { data: materias, setData: setMaterias, isLoading: isLoadingList, error: listError, reload: reloadSubjects } = useAsyncResource(
-    () => plansApi.obtenerMaterias(plan.id),
-    [plan.id],
-  );
+  const [materias, setMaterias] = useState([]);
   const [selectedYear, setSelectedYear] = useState('1°');
   const [editingSubject, setEditingSubject] = useState(null);
+  const [isEditingPlan, setIsEditingPlan] = useState(false);
 
   // Correlatividades: { [idMateria]: [idsCorrelativas] }
   const [correlatives, setCorrelatives] = useState({});
@@ -40,19 +37,18 @@ function PlanDetalle({ plan, onBack }) {
   const [correlativeNotice, setCorrelativeNotice] = useState('');
   const [isConfirmingCorrelatives, setIsConfirmingCorrelatives] = useState(false);
 
-
-  const handleSaveSubjects = async (newSubjects) => {
-    try {
-      await plansApi.agregarMaterias(plan.id, newSubjects);
-    } finally {
-      await reloadSubjects(); 
-    }
+  const handleSaveSubjects = (newSubjects) => {
+    setMaterias((current) => [...current, ...newSubjects]);
     setIsLoadingSubjects(false);
   };
 
-  const handleUpdateSubject = async (updatedSubject) => {
-    await plansApi.actualizarMateria(updatedSubject);
-    await reloadSubjects();
+  const handleUpdatePlan = async (changes) => {
+    await onUpdatePlan(plan.id, changes);
+    setIsEditingPlan(false);
+  };
+
+  const handleUpdateSubject = (updatedSubject) => {
+    setMaterias((current) => current.map((materia) => (materia.id === updatedSubject.id ? updatedSubject : materia)));
     setEditingSubject(null);
   };
 
@@ -60,6 +56,7 @@ function PlanDetalle({ plan, onBack }) {
     if (!window.confirm(`¿Eliminar la materia "${subject.materia}"?`)) return;
     setMaterias((current) => current.filter((materia) => materia.id !== subject.id));
 
+    // Se limpian las correlativas que apuntaban a la materia eliminada
     const cleanUp = (source) => {
       const result = {};
       Object.entries(source).forEach(([id, list]) => {
@@ -129,6 +126,7 @@ function PlanDetalle({ plan, onBack }) {
     const selectedSubject = materias.find((materia) => materia.id === selectedSubjectId) ?? null;
     const selectedList = draftCorrelatives[selectedSubjectId] ?? [];
 
+    // Solo se puede ser correlativa de una materia de un año anterior
     const previousYears = YEARS.slice(0, YEARS.indexOf(correlativeYear));
 
     return (
@@ -256,11 +254,7 @@ function PlanDetalle({ plan, onBack }) {
             )}
           </div>
 
-          {listError && <p className="field-error" role="alert">{listError}</p>}
-
-          {isLoadingList ? (
-            <p>Cargando materias...</p>
-          ) : materias.length === 0 ? (
+          {materias.length === 0 ? (
             <div className="plan-materias-empty">
               <div className="plan-materias-icon"><FileText size={32} /></div>
               <h3>Todavía no hay materias cargadas</h3>
@@ -376,7 +370,7 @@ function PlanDetalle({ plan, onBack }) {
         </div>
         {activeTab === 'Resumen' && (
           <div className="plan-detalle-actions">
-            <button type="button" className="plan-detalle-button">Editar</button>
+            <button type="button" className="plan-detalle-button" onClick={() => setIsEditingPlan(true)}>Editar</button>
             <button type="button" className="plan-detalle-button">Archivar</button>
           </div>
         )}
@@ -416,6 +410,14 @@ function PlanDetalle({ plan, onBack }) {
             .sort(sortByOrder)}
           onClose={() => setIsConfirmingCorrelatives(false)}
           onConfirm={confirmSaveCorrelatives}
+        />
+      )}
+
+      {isEditingPlan && (
+        <EditPlanModal
+          plan={plan}
+          onClose={() => setIsEditingPlan(false)}
+          onSave={handleUpdatePlan}
         />
       )}
     </section>
