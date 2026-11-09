@@ -8,7 +8,7 @@ const MENU_POR_ROL = {
     { label: 'Docentes', path: '/secretario/docentes', icon: 'UserRound', modulo: 'docentes' },
     { label: 'Materias', path: '/secretario/materias', icon: 'BookOpen', modulo: 'materias', proximamente: true },
     { label: 'Usuarios', path: '/secretario/usuarios', icon: 'Users', modulo: 'usuarios' },
-    { label: 'Auditoría', path: '/secretario/auditoria', icon: 'ShieldCheck', modulo: 'auditoria', proximamente: true },
+    { label: 'Auditoría', path: '/secretario/auditoria', icon: 'ShieldCheck', modulo: 'auditoria' },
   ],
   estudiante: [
     { label: 'Inicio', path: '/estudiante/inicio', icon: 'Grid2X2', modulo: 'inicio' },
