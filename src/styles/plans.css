@@ -835,6 +835,117 @@
   color: var(--color-muted);
 }
 
+/* ===== Visualizar correlatividades ===== */
+.correlative-toolbar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 20px;
+}
+
+.correlative-toolbar .year-tabs {
+  margin: 0 0 8px;
+}
+
+.correlative-view-header h2 {
+  margin-bottom: 4px;
+}
+
+.correlative-view-header .plan-materias-subtitle {
+  margin-bottom: 0;
+}
+
+.correlative-view-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.correlative-view-item {
+  padding: 14px 16px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-card);
+}
+
+.correlative-view-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.correlative-view-icon {
+  color: var(--color-primary-strong);
+  flex-shrink: 0;
+}
+
+.correlative-view-info {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.correlative-view-info strong {
+  font-size: 13px;
+  color: var(--color-text);
+}
+
+.correlative-view-info span {
+  font-size: 10px;
+  color: var(--color-muted);
+}
+
+.correlative-toggle {
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--color-muted);
+  cursor: pointer;
+}
+
+.correlative-view-detail {
+  margin-top: 14px;
+  padding: 12px 14px 16px;
+  border-radius: var(--radius-sm);
+  background: #e3ede4;
+}
+
+.correlative-view-detail h4 {
+  margin: 0 0 12px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.correlative-view-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.correlative-view-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border: 1px solid var(--color-primary);
+  border-radius: var(--radius-sm);
+  background: #d4e3d6;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.correlative-view-chip .correlative-number {
+  background: var(--color-primary);
+  color: var(--color-surface);
+}
+
 /* ===== Responsive ===== */
 @media (max-width: 800px) {
   .plans-grid {

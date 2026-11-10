@@ -1,9 +1,11 @@
 import { useState } from 'react';
-import { ChevronRight, FileText, Pencil, Plus, Trash2 } from 'lucide-react';
+import { ChevronDown, ChevronRight, ChevronUp, FileText, Pencil, Plus, Trash2 } from 'lucide-react';
 import CargarMaterias from './LoadSubjects';
 import EditSubjectModal from './EditSubjectModal';
 import ConfirmCorrelativesModal from './ConfirmCorrelativesModal';
 import EditPlanModal from './EditPlanModal';
+import { plansApi } from '../../components/plans/plansApi';
+import { useAsyncResource } from '../../../../hooks/useAsyncResource';
 
 const tabs = ['Resumen', 'Materias', 'Materias por año', 'Correlatividades'];
 const YEARS = ['1°', '2°', '3°'];
@@ -24,7 +26,10 @@ function Field({ label, value }) {
 function PlanDetalle({ plan, onBack, onUpdatePlan }) {
   const [activeTab, setActiveTab] = useState('Resumen');
   const [isLoadingSubjects, setIsLoadingSubjects] = useState(false);
-  const [materias, setMaterias] = useState([]);
+  const { data: materias, setData: setMaterias, isLoading: isLoadingList, error: listError, reload: reloadSubjects } = useAsyncResource(
+    () => plansApi.obtenerMaterias(plan.id),
+    [plan.id],
+  );
   const [selectedYear, setSelectedYear] = useState('1°');
   const [editingSubject, setEditingSubject] = useState(null);
   const [isEditingPlan, setIsEditingPlan] = useState(false);
@@ -36,9 +41,15 @@ function PlanDetalle({ plan, onBack, onUpdatePlan }) {
   const [selectedSubjectId, setSelectedSubjectId] = useState(null);
   const [correlativeNotice, setCorrelativeNotice] = useState('');
   const [isConfirmingCorrelatives, setIsConfirmingCorrelatives] = useState(false);
+  const [correlativeMode, setCorrelativeMode] = useState('assign'); // 'assign' | 'view'
+  const [expandedSubjectId, setExpandedSubjectId] = useState(null);
 
-  const handleSaveSubjects = (newSubjects) => {
-    setMaterias((current) => [...current, ...newSubjects]);
+  const handleSaveSubjects = async (newSubjects) => {
+    try {
+      await plansApi.agregarMaterias(plan.id, newSubjects);
+    } finally {
+      await reloadSubjects();
+    }
     setIsLoadingSubjects(false);
   };
 
@@ -47,16 +58,15 @@ function PlanDetalle({ plan, onBack, onUpdatePlan }) {
     setIsEditingPlan(false);
   };
 
-  const handleUpdateSubject = (updatedSubject) => {
-    setMaterias((current) => current.map((materia) => (materia.id === updatedSubject.id ? updatedSubject : materia)));
+  const handleUpdateSubject = async (updatedSubject) => {
+    await plansApi.actualizarMateria(updatedSubject);
+    await reloadSubjects();
     setEditingSubject(null);
   };
 
   const handleDeleteSubject = (subject) => {
     if (!window.confirm(`¿Eliminar la materia "${subject.materia}"?`)) return;
-    setMaterias((current) => current.filter((materia) => materia.id !== subject.id));
 
-    // Se limpian las correlativas que apuntaban a la materia eliminada
     const cleanUp = (source) => {
       const result = {};
       Object.entries(source).forEach(([id, list]) => {
@@ -75,6 +85,7 @@ function PlanDetalle({ plan, onBack, onUpdatePlan }) {
     if (tab === 'Correlatividades') {
       setDraftCorrelatives(correlatives);
       setCorrelativeNotice('');
+      setCorrelativeMode('assign');
     }
   };
 
@@ -109,6 +120,24 @@ function PlanDetalle({ plan, onBack, onUpdatePlan }) {
     setCorrelativeNotice('');
   };
 
+  const openViewMode = () => {
+    setCorrelativeNotice('');
+    setExpandedSubjectId(null);
+    setCorrelativeMode('view');
+  };
+
+  const openAssignMode = (subject) => {
+    setDraftCorrelatives(correlatives);
+    setCorrelativeNotice('');
+    if (subject) {
+      setCorrelativeYear(subject.anio);
+      setSelectedSubjectId(subject.id);
+    } else {
+      setSelectedSubjectId(null);
+    }
+    setCorrelativeMode('assign');
+  };
+
   if (isLoadingSubjects) {
     return (
       <CargarMaterias
@@ -120,37 +149,125 @@ function PlanDetalle({ plan, onBack, onUpdatePlan }) {
     );
   }
 
-  const renderCorrelatives = () => {
+  const renderYearTabs = () => {
     const countByYear = (year) => materias.filter((materia) => materia.anio === year).length;
+    return (
+      <div className="year-tabs correlative-year-tabs">
+        {CORRELATIVE_YEARS.map((year) => {
+          const count = countByYear(year);
+          return (
+            <button
+              key={year}
+              type="button"
+              className={`year-tab ${correlativeYear === year ? 'active' : ''}`}
+              onClick={() => {
+                setCorrelativeYear(year);
+                setSelectedSubjectId(null);
+                setExpandedSubjectId(null);
+              }}
+            >
+              <strong>{yearLabel(year)}</strong>
+              <span>{count} {count === 1 ? 'materia' : 'materias'}</span>
+            </button>
+          );
+        })}
+      </div>
+    );
+  };
+
+  const renderViewCorrelatives = () => {
+    const subjectsWithCorrelatives = materias
+      .filter((materia) => materia.anio === correlativeYear && (correlatives[materia.id] ?? []).length > 0)
+      .sort(sortByOrder);
+
+    return (
+      <div className="plan-materias">
+        <div className="correlative-view-header">
+          <div>
+            <h2>Visualizar Correlatividades</h2>
+            <p className="plan-materias-subtitle">Consulta las correlatividades configuradas para las materias del Plan de Estudios</p>
+          </div>
+        </div>
+
+        <div className="correlative-toolbar">
+          {renderYearTabs()}
+          <button type="button" className="create-plan-button" onClick={() => openAssignMode(null)}>
+            + Asignar nuevas correlatividades
+          </button>
+        </div>
+
+        <h3 className="correlative-title">Materias con correlatividades</h3>
+
+        {subjectsWithCorrelatives.length === 0 ? (
+          <p className="year-subjects-empty">Todavía no hay correlatividades asignadas para este año.</p>
+        ) : (
+          <div className="correlative-view-list">
+            {subjectsWithCorrelatives.map((materia) => {
+              const list = (correlatives[materia.id] ?? [])
+                .map((id) => materias.find((item) => item.id === id))
+                .filter(Boolean)
+                .sort(sortByOrder);
+              const isExpanded = expandedSubjectId === materia.id;
+              return (
+                <div className="correlative-view-item" key={materia.id}>
+                  <div className="correlative-view-row">
+                    <FileText size={22} className="correlative-view-icon" />
+                    <div className="correlative-view-info">
+                      <strong>{materia.materia}</strong>
+                      <span>{list.length} {list.length === 1 ? 'correlativa asignada' : 'correlativas asignadas'}</span>
+                    </div>
+                    <button
+                      type="button"
+                      className="correlative-toggle"
+                      aria-label={isExpanded ? 'Ocultar correlativas' : 'Ver correlativas'}
+                      aria-expanded={isExpanded}
+                      onClick={() => setExpandedSubjectId(isExpanded ? null : materia.id)}
+                    >
+                      {isExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                    </button>
+                    <button type="button" className="plan-detalle-button" onClick={() => openAssignMode(materia)}>Editar</button>
+                  </div>
+
+                  {isExpanded && (
+                    <div className="correlative-view-detail">
+                      <h4>Materias Correlativas</h4>
+                      <div className="correlative-view-chips">
+                        {list.map((correlative) => (
+                          <span className="correlative-view-chip" key={correlative.id}>
+                            <span className="correlative-number">{correlative.orden}</span>
+                            {correlative.materia}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const renderCorrelatives = () => {
+    if (correlativeMode === 'view') return renderViewCorrelatives();
+
     const subjectsOfYear = materias.filter((materia) => materia.anio === correlativeYear).sort(sortByOrder);
     const selectedSubject = materias.find((materia) => materia.id === selectedSubjectId) ?? null;
     const selectedList = draftCorrelatives[selectedSubjectId] ?? [];
 
-    // Solo se puede ser correlativa de una materia de un año anterior
     const previousYears = YEARS.slice(0, YEARS.indexOf(correlativeYear));
 
     return (
       <div className="plan-materias">
         <h2>Correlatividades</h2>
 
-        <div className="year-tabs correlative-year-tabs">
-          {CORRELATIVE_YEARS.map((year) => {
-            const count = countByYear(year);
-            return (
-              <button
-                key={year}
-                type="button"
-                className={`year-tab ${correlativeYear === year ? 'active' : ''}`}
-                onClick={() => {
-                  setCorrelativeYear(year);
-                  setSelectedSubjectId(null);
-                }}
-              >
-                <strong>{yearLabel(year)}</strong>
-                <span>{count} {count === 1 ? 'materia' : 'materias'}</span>
-              </button>
-            );
-          })}
+        <div className="correlative-toolbar">
+          {renderYearTabs()}
+          <button type="button" className="create-plan-button" onClick={openViewMode}>
+            Visualizar correlativas
+          </button>
         </div>
 
         <h3 className="correlative-title">Materias de {correlativeYear.replace('°', '.° año')}</h3>
@@ -254,7 +371,11 @@ function PlanDetalle({ plan, onBack, onUpdatePlan }) {
             )}
           </div>
 
-          {materias.length === 0 ? (
+          {listError && <p className="field-error" role="alert">{listError}</p>}
+
+          {isLoadingList ? (
+            <p>Cargando materias...</p>
+          ) : materias.length === 0 ? (
             <div className="plan-materias-empty">
               <div className="plan-materias-icon"><FileText size={32} /></div>
               <h3>Todavía no hay materias cargadas</h3>
