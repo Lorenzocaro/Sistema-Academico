@@ -13,6 +13,7 @@ namespace AcademicSystem.Entities.DTOs
         private string? emergencyContactPhone;
         private string? password;
         private bool isActive;
+        private string? recordNumber;
 
         public string FirstName { get { return firstName; } set { firstName = value; } }
         public string LastName { get { return lastName; } set { lastName = value; } }
@@ -25,5 +26,8 @@ namespace AcademicSystem.Entities.DTOs
         public string? EmergencyContactPhone { get { return emergencyContactPhone; } set { emergencyContactPhone = value; } }
         public string? Password { get { return password; } set { password = value; } }
         public bool IsActive { get { return isActive; } set { isActive = value; } }
+
+        // Número de legajo. Solo se usa cuando el rol es Student.
+        public string? RecordNumber { get { return recordNumber; } set { recordNumber = value; } }
     }
 }

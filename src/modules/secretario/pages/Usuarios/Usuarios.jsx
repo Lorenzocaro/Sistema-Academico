@@ -2,9 +2,8 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Plus, Users } from 'lucide-react';
 import { usersService } from '../../../../services/usersService';
 import { rolesService } from '../../../../services/rolesService';
+import { nombreRol } from '../../../../core/auth/roles';
 import UsuarioForm from './UsuarioForm';
-
-const NOMBRE_ROL = { Student: 'Estudiante', AcademicSecretary: 'Secretaría académica' };
 
 function Usuarios() {
   const [usuarios, setUsuarios] = useState([]);
@@ -80,7 +79,7 @@ function Usuarios() {
         <input type="text" placeholder="Buscar por nombre, correo o CUIL" aria-label="Buscar usuarios" value={busqueda} onChange={(e) => setBusqueda(e.target.value)} />
         <select aria-label="Filtrar por rol" value={filtroRol} onChange={(e) => setFiltroRol(e.target.value)}>
           <option value="">Rol: todos</option>
-          {roles.map((rol) => <option key={rol.id} value={rol.id}>{NOMBRE_ROL[rol.name] ?? rol.name}</option>)}
+          {roles.map((rol) => <option key={rol.id} value={rol.id}>{nombreRol(rol.name)}</option>)}
         </select>
         <select aria-label="Filtrar por estado" value={filtroEstado} onChange={(e) => setFiltroEstado(e.target.value)}>
           <option value="">Estado: todos</option>
@@ -110,7 +109,7 @@ function Usuarios() {
                   <td>{usuario.lastName}, {usuario.firstName}</td>
                   <td>{usuario.email}</td>
                   <td>{usuario.cuil}</td>
-                  <td>{NOMBRE_ROL[usuario.roleName] ?? usuario.roleName}</td>
+                  <td>{nombreRol(usuario.roleName)}</td>
                   <td><span className={`usuarios-estado ${usuario.isActive ? 'usuarios-estado--activo' : 'usuarios-estado--baja'}`}>{usuario.isActive ? 'Activo' : 'Baja'}</span></td>
                   <td>
                     <div className="usuarios-acciones">

@@ -32,21 +32,28 @@ public class UserRepository : IUserRepository
         _context.Users.AsNoTracking()
             .OrderBy(u => u.LastName).ThenBy(u => u.FirstName)
             .Select(u => new UserResponseDto(u.Id, u.FirstName, u.LastName, u.Cuil, u.BirthDate, u.Address,
-                u.RoleId, u.Role.Name, u.Email, u.Phone, u.EmergencyContactPhone, u.IsActive))
+                u.RoleId, u.Role.Name, u.Email, u.Phone, u.EmergencyContactPhone, u.IsActive,
+                u.Student != null ? u.Student.RecordNumber : null))
             .ToListAsync(ct);
 
     public Task<UserResponseDto?> GetByIdAsync(int id, CancellationToken ct) =>
         _context.Users.AsNoTracking()
             .Where(u => u.Id == id)
             .Select(u => new UserResponseDto(u.Id, u.FirstName, u.LastName, u.Cuil, u.BirthDate, u.Address,
-                u.RoleId, u.Role.Name, u.Email, u.Phone, u.EmergencyContactPhone, u.IsActive))
+                u.RoleId, u.Role.Name, u.Email, u.Phone, u.EmergencyContactPhone, u.IsActive,
+                u.Student != null ? u.Student.RecordNumber : null))
             .SingleOrDefaultAsync(ct);
 
     public Task<User?> FindAsync(int id, CancellationToken ct) =>
         _context.Users.SingleOrDefaultAsync(u => u.Id == id, ct);
 
-    public Task<bool> RoleExistsAsync(int roleId, CancellationToken ct) =>
-        _context.Roles.AnyAsync(r => r.Id == roleId, ct);
+    public Task<User?> FindWithProfilesAsync(int id, CancellationToken ct) =>
+        _context.Users
+            .Include(u => u.Student)
+            .Include(u => u.Teacher)
+            .Include(u => u.AcademicSecretary)
+            .Include(u => u.Director)
+            .SingleOrDefaultAsync(u => u.Id == id, ct);
 
     public Task<string?> GetRoleNameAsync(int roleId, CancellationToken ct) =>
         _context.Roles.Where(r => r.Id == roleId).Select(r => r.Name).SingleOrDefaultAsync(ct);
@@ -65,6 +72,15 @@ public class UserRepository : IUserRepository
 
     public Task<bool> HasSecretaryProfileAsync(int userId, CancellationToken ct) =>
         _context.AcademicSecretaries.AnyAsync(s => s.UserId == userId, ct);
+
+    public Task<bool> HasTeacherProfileAsync(int userId, CancellationToken ct) =>
+        _context.Teachers.AnyAsync(t => t.UserId == userId, ct);
+
+    public Task<bool> StudentDniOrRecordNumberExistsAsync(string dni, string recordNumber, CancellationToken ct) =>
+        _context.Students.AnyAsync(s => s.Dni == dni || s.RecordNumber == recordNumber, ct);
+
+    public Task<bool> RecordNumberExistsForOtherAsync(int userId, string recordNumber, CancellationToken ct) =>
+        _context.Students.AnyAsync(s => s.UserId != userId && s.RecordNumber == recordNumber, ct);
 
     public Task<bool> IsActiveWithRoleAsync(int userId, string roleName, CancellationToken ct) =>
         _context.Users.AnyAsync(u => u.Id == userId && u.IsActive && u.Role.Name == roleName, ct);

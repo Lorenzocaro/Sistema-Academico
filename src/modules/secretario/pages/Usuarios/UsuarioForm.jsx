@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { usersService } from '../../../../services/usersService';
+import { nombreRol } from '../../../../core/auth/roles';
 
 const VACIO = {
   firstName: '',
@@ -11,6 +12,7 @@ const VACIO = {
   emergencyContactPhone: '',
   email: '',
   roleId: '',
+  recordNumber: '',
   password: '',
   isActive: true,
 };
@@ -27,18 +29,20 @@ function valoresIniciales(usuario) {
     emergencyContactPhone: usuario.emergencyContactPhone ?? '',
     email: usuario.email ?? '',
     roleId: String(usuario.roleId),
+    recordNumber: usuario.recordNumber ?? '',
     password: '',
     isActive: usuario.isActive,
   };
 }
 
-function validar(valores, esEdicion) {
+function validar(valores, esEdicion, legajoObligatorio) {
   const errores = {};
   if (!valores.firstName.trim()) errores.firstName = 'Ingresá el nombre.';
   if (!valores.lastName.trim()) errores.lastName = 'Ingresá el apellido.';
   if (!/^\d{11}$/.test(valores.cuil.trim())) errores.cuil = 'El CUIL debe tener 11 dígitos, sin guiones.';
   if (!valores.email.trim() || !valores.email.includes('@')) errores.email = 'Ingresá un correo válido.';
   if (!valores.roleId) errores.roleId = 'Seleccioná un rol.';
+  if (legajoObligatorio && !valores.recordNumber.trim()) errores.recordNumber = 'Ingresá el número de legajo.';
   if (!esEdicion && !valores.password) errores.password = 'Ingresá una contraseña.';
   return errores;
 }
@@ -61,6 +65,10 @@ function UsuarioForm({ usuario, roles, onCancelar, onGuardado }) {
   const [errorApi, setErrorApi] = useState('');
   const [guardando, setGuardando] = useState(false);
 
+  const esEstudiante = roles.find((rol) => String(rol.id) === valores.roleId)?.name === 'Student';
+  // El legajo es lo que crea el perfil del estudiante: se pide mientras no tenga uno cargado.
+  const legajoObligatorio = esEstudiante && !usuario?.recordNumber;
+
   const cambiar = (campo) => (evento) => {
     const valor = evento.target.type === 'checkbox' ? evento.target.checked : evento.target.value;
     setValores((actuales) => ({ ...actuales, [campo]: valor }));
@@ -69,7 +77,7 @@ function UsuarioForm({ usuario, roles, onCancelar, onGuardado }) {
   const guardar = async (evento) => {
     evento.preventDefault();
     setErrorApi('');
-    const nuevosErrores = validar(valores, esEdicion);
+    const nuevosErrores = validar(valores, esEdicion, legajoObligatorio);
     setErrores(nuevosErrores);
     if (Object.keys(nuevosErrores).length > 0) return;
 
@@ -80,6 +88,7 @@ function UsuarioForm({ usuario, roles, onCancelar, onGuardado }) {
       birthDate: valores.birthDate || null,
       address: valores.address.trim() || null,
       roleId: Number(valores.roleId),
+      recordNumber: esEstudiante ? valores.recordNumber.trim() || null : null,
       email: valores.email.trim(),
       phone: valores.phone.trim() || null,
       emergencyContactPhone: valores.emergencyContactPhone.trim() || null,
@@ -136,10 +145,15 @@ function UsuarioForm({ usuario, roles, onCancelar, onGuardado }) {
             <select id="roleId" value={valores.roleId} onChange={cambiar('roleId')}>
               <option value="">Seleccioná un rol</option>
               {roles.map((rol) => (
-                <option key={rol.id} value={rol.id}>{rol.name === 'Student' ? 'Estudiante' : rol.name === 'AcademicSecretary' ? 'Secretaría académica' : rol.name}</option>
+                <option key={rol.id} value={rol.id}>{nombreRol(rol.name)}</option>
               ))}
             </select>
           </Campo>
+          {esEstudiante && (
+            <Campo id="recordNumber" etiqueta={legajoObligatorio ? 'Legajo *' : 'Legajo'} error={errores.recordNumber}>
+              <input id="recordNumber" type="text" maxLength={20} value={valores.recordNumber} onChange={cambiar('recordNumber')} />
+            </Campo>
+          )}
           <Campo id="password" etiqueta={esEdicion ? 'Contraseña' : 'Contraseña *'} error={errores.password} ayuda={esEdicion ? 'Dejala vacía para no cambiarla.' : null}>
             <input id="password" type="password" autoComplete="new-password" value={valores.password} onChange={cambiar('password')} />
           </Campo>

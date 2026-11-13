@@ -26,11 +26,18 @@ public class UsersController(IUserService userService) : ControllerBase
     {
         var error = Validate(input);
         if (error is not null) return BadRequest(new { message = error });
-        if (!await userService.RoleExistsAsync(input.RoleId, ct)) return BadRequest(new { message = "El rol indicado no existe." });
+        var roleName = await userService.GetRoleNameAsync(input.RoleId, ct);
+        if (roleName is null) return BadRequest(new { message = "El rol indicado no existe." });
 
         var cuil = input.Cuil.Trim();
         var email = input.Email.Trim();
         if (await userService.CuilOrEmailExistsAsync(cuil, email, ct)) return Conflict(new { message = "Ya existe un usuario con ese CUIL o correo." });
+
+        if (roleName == RoleNames.Student)
+        {
+            var problema = await CheckStudentAsync(input, cuil, null, ct);
+            if (problema is not null) return problema;
+        }
 
         var created = await userService.CreateAsync(input, ct);
         return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
@@ -50,6 +57,8 @@ public class UsersController(IUserService userService) : ControllerBase
             return Conflict(new { message = "El usuario tiene perfil de estudiante y debe conservar el rol Student." });
         if (await userService.HasSecretaryProfileAsync(id, ct) && roleName != RoleNames.AcademicSecretary)
             return Conflict(new { message = "El usuario tiene perfil de secretario académico y debe conservar el rol AcademicSecretary." });
+        if (await userService.HasTeacherProfileAsync(id, ct) && roleName != RoleNames.Teacher)
+            return Conflict(new { message = "El usuario tiene perfil de docente y debe conservar el rol Teacher." });
 
         var dejaDeSerSecretarioActivo = !input.IsActive || roleName != RoleNames.AcademicSecretary;
         if (dejaDeSerSecretarioActivo && await userService.IsLastActiveSecretaryAsync(id, ct))
@@ -58,6 +67,12 @@ public class UsersController(IUserService userService) : ControllerBase
         var cuil = input.Cuil.Trim();
         var email = input.Email.Trim();
         if (await userService.CuilOrEmailExistsAsync(cuil, email, id, ct)) return Conflict(new { message = "Otro usuario ya tiene ese CUIL o correo." });
+
+        if (roleName == RoleNames.Student)
+        {
+            var problema = await CheckStudentAsync(input, cuil, id, ct);
+            if (problema is not null) return problema;
+        }
 
         var updated = await userService.UpdateAsync(id, input, ct);
         return updated is null ? NotFound() : Ok(updated);
@@ -72,6 +87,18 @@ public class UsersController(IUserService userService) : ControllerBase
 
         await userService.DeleteAsync(id, ct);
         return NoContent();
+    }
+
+    // Un estudiante necesita legajo para tener perfil, y ni el DNI ni el legajo pueden repetirse.
+    private async Task<IActionResult?> CheckStudentAsync(UserRequestDto input, string cuil, int? userId, CancellationToken ct)
+    {
+        var error = await userService.ValidateRecordNumberAsync(input.RecordNumber, userId, ct);
+        if (error is not null) return BadRequest(new { message = error });
+
+        if (await userService.StudentDataTakenAsync(cuil, input.RecordNumber, userId, ct))
+            return Conflict(new { message = "Ya existe un estudiante con ese DNI o número de legajo." });
+
+        return null;
     }
 
     private static string? Validate(UserRequestDto x, bool passwordOptional = false)
