@@ -3,11 +3,12 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import icgbLogo from '../../assets/icgb-logo.svg';
 import { cerrarSesion } from '../auth/session';
 import { menuParaRol } from '../auth/permisos';
+import { usePermisos } from '../auth/usePermisos';
 
 const ICONS = { Grid2X2, GraduationCap, ClipboardList, Users, UserRound, BookOpen, ShieldCheck };
 
 function Sidebar({ rolSimulado = 'secretario', isOpen, onClose }) {
-  const menuItems = menuParaRol(rolSimulado);
+  const menuItems = menuParaRol(rolSimulado, usePermisos());
   const esEstudiante = rolSimulado === 'estudiante';
   const navigate = useNavigate();
   const handleCerrarSesion = () => {
