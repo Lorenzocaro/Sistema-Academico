@@ -13,6 +13,7 @@ namespace AcademicSystem.Api.Controllers;
 public class AuthController : ControllerBase
 {
     private readonly IAuthService _authService;
+    private readonly IAccessAuditService _auditService;
     private readonly IUserService _userService;
     private readonly IJwtTokenService _tokenService;
     private readonly IRefreshTokenService _refreshTokenService;
@@ -20,12 +21,14 @@ public class AuthController : ControllerBase
 
     public AuthController(
         IAuthService authService,
+        IAccessAuditService auditService,
         IUserService userService,
         IJwtTokenService tokenService,
         IRefreshTokenService refreshTokenService,
         ILogger<AuthController> logger)
     {
         _authService = authService;
+        _auditService = auditService;
         _userService = userService;
         _tokenService = tokenService;
         _refreshTokenService = refreshTokenService;
@@ -36,7 +39,7 @@ public class AuthController : ControllerBase
     // se utilizan DTO para que nunca se devuelvan datos sensibles(como el hash de la contraseña)
     [AllowAnonymous]
     [HttpPost("login")]
-    public IActionResult Login([FromBody] LoginRequestDto loginRequest)
+    public async Task<IActionResult> Login([FromBody] LoginRequestDto loginRequest)
     {
         try
         {
@@ -44,6 +47,14 @@ public class AuthController : ControllerBase
                 || string.IsNullOrWhiteSpace(loginRequest.Email)
                 || string.IsNullOrWhiteSpace(loginRequest.Password))
             {
+                await _auditService.RecordAsync(
+                    null,
+                    loginRequest?.Email?.Trim(),
+                    HttpContext.Connection.RemoteIpAddress?.ToString(),
+                    "/api/auth/login",
+                    "Login",
+                    "Failure",
+                    CancellationToken.None);
                 return BadRequest("Debe ingresar email y contraseña.");
             }
 
@@ -51,8 +62,14 @@ public class AuthController : ControllerBase
 
             if (user == null)
             {
-                // solo se loguea el email, nunca la contraseña
-                _logger.LogWarning("Intento de inicio de sesion fallido para {Email}", loginRequest.Email);
+                await _auditService.RecordAsync(
+                    null,
+                    loginRequest.Email.Trim(),
+                    HttpContext.Connection.RemoteIpAddress?.ToString(),
+                    "/api/auth/login",
+                    "Login",
+                    "Failure",
+                    CancellationToken.None);
                 return Unauthorized("Correo o contraseña incorrectos");
             }
 
@@ -77,11 +94,28 @@ public class AuthController : ControllerBase
                 loginResponse.RecordNumber = user.Student.RecordNumber;
             }
 
+            await _auditService.RecordAsync(
+                user.Id,
+                user.Email,
+                HttpContext.Connection.RemoteIpAddress?.ToString(),
+                "/api/auth/login",
+                "Login",
+                "Success",
+                CancellationToken.None);
+
             return Ok(loginResponse);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error inesperado durante el inicio de sesión");
+            await _auditService.RecordAsync(
+                null,
+                loginRequest?.Email?.Trim(),
+                HttpContext.Connection.RemoteIpAddress?.ToString(),
+                "/api/auth/login",
+                "Login",
+                "Failure",
+                CancellationToken.None);
             return StatusCode(500, "Ocurrió un error inesperado. Intentá de nuevo más tarde.");
         }
     }

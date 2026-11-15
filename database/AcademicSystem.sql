@@ -503,7 +503,30 @@ CREATE TABLE dbo.CourseRecords (
 GO
 
 /* =============================================================================
-   8. Initial data: one role per profile in the UML
+   8. Authentication and authorization audit events
+   ============================================================================= */
+
+IF OBJECT_ID(N'dbo.AccessAuditEvents', N'U') IS NULL
+CREATE TABLE dbo.AccessAuditEvents (
+    Id              INT IDENTITY(1,1) NOT NULL,
+    UserId          INT               NULL,
+    UserIdentifier  NVARCHAR(255)     NULL,
+    OccurredAt      DATETIMEOFFSET(0) NOT NULL CONSTRAINT DF_AccessAuditEvents_OccurredAt DEFAULT (TODATETIMEOFFSET(SYSUTCDATETIME(), '+00:00')),
+    IpAddress       NVARCHAR(45)      NULL,
+    Module          NVARCHAR(256)     NOT NULL,
+    EventType       NVARCHAR(30)      NOT NULL,
+    Result          NVARCHAR(30)      NOT NULL,
+
+    CONSTRAINT PK_AccessAuditEvents PRIMARY KEY (Id),
+    CONSTRAINT CK_AccessAuditEvents_EventType CHECK (EventType IN (N'Login', N'AccessDenied')),
+    CONSTRAINT CK_AccessAuditEvents_Result CHECK (Result IN (N'Success', N'Failure', N'Denied')),
+    INDEX IX_AccessAuditEvents_OccurredAt (OccurredAt),
+    INDEX IX_AccessAuditEvents_UserId_OccurredAt (UserId, OccurredAt)
+);
+GO
+
+/* =============================================================================
+   9. Initial data: one role per profile in the UML
    ============================================================================= */
 
 INSERT INTO dbo.Roles (Name)
