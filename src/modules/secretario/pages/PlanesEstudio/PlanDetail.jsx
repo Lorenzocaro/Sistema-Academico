@@ -45,6 +45,7 @@ function PlanDetalle({ plan, onBack, onUpdatePlan }) {
   const [correlativeMode, setCorrelativeMode] = useState('assign'); // 'assign' | 'view'
   const [expandedSubjectId, setExpandedSubjectId] = useState(null);
   const [showSavedToast, setShowSavedToast] = useState(false);
+  const [isArchiving, setIsArchiving] = useState(false);
 
   // las correlatividades se cargan de la base al abrir el plan
   useEffect(() => {
@@ -82,6 +83,20 @@ function PlanDetalle({ plan, onBack, onUpdatePlan }) {
   const handleUpdatePlan = async (changes) => {
     await onUpdatePlan(plan.id, changes);
     setIsEditingPlan(false);
+  };
+
+  const handleToggleArchive = async () => {
+    const message = plan.activo
+      ? `¿Archivar el plan "${plan.nombre}"?`
+      : `¿Restaurar el plan "${plan.nombre}"?`;
+    if (!window.confirm(message)) return;
+
+    setIsArchiving(true);
+    try {
+      await onUpdatePlan(plan.id, { activo: !plan.activo });
+    } finally {
+      setIsArchiving(false);
+    }
   };
 
   const handleUpdateSubject = async (updatedSubject) => {
@@ -335,6 +350,30 @@ function PlanDetalle({ plan, onBack, onUpdatePlan }) {
 
     const previousYears = YEARS.slice(0, YEARS.indexOf(correlativeYear));
 
+    // materias cuatrimestrales del mismo año (sin contar la materia elegida)
+    const sameYearTermSubjects = materias
+      .filter((materia) => materia.anio === correlativeYear
+        && materia.regimen !== 'Anual'
+        && materia.subjectId !== selectedSubjectId)
+      .sort(sortByOrder);
+
+    const renderOptions = (available) => (
+      <div className="correlative-options">
+        {available.map((materia) => (
+          <button
+            key={materia.id}
+            type="button"
+            className={`correlative-option ${selectedList.includes(materia.subjectId) ? 'checked' : ''}`}
+            aria-pressed={selectedList.includes(materia.subjectId)}
+            onClick={() => toggleCorrelative(materia.subjectId)}
+          >
+            <span className="correlative-number">{materia.orden}</span>
+            <span className="correlative-name">{materia.materia}</span>
+          </button>
+        ))}
+      </div>
+    );
+
     return (
       <div className="plan-materias">
         <h2>Correlatividades</h2>
@@ -382,24 +421,18 @@ function PlanDetalle({ plan, onBack, onUpdatePlan }) {
                   {available.length === 0 ? (
                     <p className="year-subjects-empty">No hay materias cargadas para este año.</p>
                   ) : (
-                    <div className="correlative-options">
-                      {available.map((materia) => (
-                        <button
-                          key={materia.id}
-                          type="button"
-                          className={`correlative-option ${selectedList.includes(materia.subjectId) ? 'checked' : ''}`}
-                          aria-pressed={selectedList.includes(materia.subjectId)}
-                          onClick={() => toggleCorrelative(materia.subjectId)}
-                        >
-                          <span className="correlative-number">{materia.orden}</span>
-                          <span className="correlative-name">{materia.materia}</span>
-                        </button>
-                      ))}
-                    </div>
+                    renderOptions(available)
                   )}
                 </div>
               );
             })}
+
+            {sameYearTermSubjects.length > 0 && (
+              <div className="correlative-group">
+                <span className="correlative-group-title">{yearLabel(correlativeYear)} · Cuatrimestrales</span>
+                {renderOptions(sameYearTermSubjects)}
+              </div>
+            )}
           </>
         )}
 
@@ -581,7 +614,9 @@ function PlanDetalle({ plan, onBack, onUpdatePlan }) {
         {activeTab === 'Resumen' && (
           <div className="plan-detalle-actions">
             <button type="button" className="plan-detalle-button" onClick={() => setIsEditingPlan(true)}>Editar</button>
-            <button type="button" className="plan-detalle-button">Archivar</button>
+            <button type="button" className="plan-detalle-button" onClick={handleToggleArchive} disabled={isArchiving}>
+              {plan.activo ? 'Archivar' : 'Restaurar'}
+            </button>
           </div>
         )}
       </div>
