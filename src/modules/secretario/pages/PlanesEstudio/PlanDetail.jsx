@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ChevronRight, FileText, Pencil, Plus, Trash2 } from 'lucide-react';
+import { ChevronDown, ChevronRight, ChevronUp, FileText, Pencil, Plus, Trash2 } from 'lucide-react';
 import CargarMaterias from './LoadSubjects';
 import EditSubjectModal from './EditSubjectModal';
 import ConfirmCorrelativesModal from './ConfirmCorrelativesModal';
@@ -42,6 +42,8 @@ function PlanDetalle({ plan, onBack, onUpdatePlan }) {
   const [correlativeNotice, setCorrelativeNotice] = useState('');
   const [isConfirmingCorrelatives, setIsConfirmingCorrelatives] = useState(false);
   const [isSavingCorrelatives, setIsSavingCorrelatives] = useState(false);
+  const [correlativeMode, setCorrelativeMode] = useState('assign'); // 'assign' | 'view'
+  const [expandedSubjectId, setExpandedSubjectId] = useState(null);
 
   // las correlatividades se cargan de la base al abrir el plan
   useEffect(() => {
@@ -59,7 +61,6 @@ function PlanDetalle({ plan, onBack, onUpdatePlan }) {
 
     return () => { cancelled = true; };
   }, [plan.id]);
-
 
   const handleSaveSubjects = async (newSubjects) => {
     try {
@@ -196,7 +197,7 @@ function PlanDetalle({ plan, onBack, onUpdatePlan }) {
     setCorrelativeNotice('');
     if (subject) {
       setCorrelativeYear(subject.anio);
-      setSelectedSubjectId(subject.id);
+      setSelectedSubjectId(subject.subjectId);
     } else {
       setSelectedSubjectId(null);
     }
@@ -216,11 +217,6 @@ function PlanDetalle({ plan, onBack, onUpdatePlan }) {
 
   const renderYearTabs = () => {
     const countByYear = (year) => materias.filter((materia) => materia.anio === year).length;
-    const subjectsOfYear = materias.filter((materia) => materia.anio === correlativeYear).sort(sortByOrder);
-    const selectedSubject = materias.find((materia) => materia.subjectId === selectedSubjectId) ?? null;
-    const selectedList = draftCorrelatives[selectedSubjectId] ?? [];
-
-    const previousYears = YEARS.slice(0, YEARS.indexOf(correlativeYear));
 
     return (
       <div className="year-tabs correlative-year-tabs">
@@ -248,7 +244,7 @@ function PlanDetalle({ plan, onBack, onUpdatePlan }) {
 
   const renderViewCorrelatives = () => {
     const subjectsWithCorrelatives = materias
-      .filter((materia) => materia.anio === correlativeYear && (correlatives[materia.id] ?? []).length > 0)
+      .filter((materia) => materia.anio === correlativeYear && (correlatives[materia.subjectId] ?? []).length > 0)
       .sort(sortByOrder);
 
     return (
@@ -274,8 +270,8 @@ function PlanDetalle({ plan, onBack, onUpdatePlan }) {
         ) : (
           <div className="correlative-view-list">
             {subjectsWithCorrelatives.map((materia) => {
-              const list = (correlatives[materia.id] ?? [])
-                .map((id) => materias.find((item) => item.id === id))
+              const list = (correlatives[materia.subjectId] ?? [])
+                .map((id) => materias.find((item) => item.subjectId === id))
                 .filter(Boolean)
                 .sort(sortByOrder);
               const isExpanded = expandedSubjectId === materia.id;
@@ -325,7 +321,7 @@ function PlanDetalle({ plan, onBack, onUpdatePlan }) {
     if (correlativeMode === 'view') return renderViewCorrelatives();
 
     const subjectsOfYear = materias.filter((materia) => materia.anio === correlativeYear).sort(sortByOrder);
-    const selectedSubject = materias.find((materia) => materia.id === selectedSubjectId) ?? null;
+    const selectedSubject = materias.find((materia) => materia.subjectId === selectedSubjectId) ?? null;
     const selectedList = draftCorrelatives[selectedSubjectId] ?? [];
 
     const previousYears = YEARS.slice(0, YEARS.indexOf(correlativeYear));
