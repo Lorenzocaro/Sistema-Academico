@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ChevronDown, ChevronRight, ChevronUp, FileText, Pencil, Plus, Trash2 } from 'lucide-react';
+import { ChevronDown, ChevronRight, ChevronUp, CircleCheck, FileText, Pencil, Plus, Trash2, X } from 'lucide-react';
 import CargarMaterias from './LoadSubjects';
 import EditSubjectModal from './EditSubjectModal';
 import ConfirmCorrelativesModal from './ConfirmCorrelativesModal';
@@ -44,6 +44,7 @@ function PlanDetalle({ plan, onBack, onUpdatePlan }) {
   const [isSavingCorrelatives, setIsSavingCorrelatives] = useState(false);
   const [correlativeMode, setCorrelativeMode] = useState('assign'); // 'assign' | 'view'
   const [expandedSubjectId, setExpandedSubjectId] = useState(null);
+  const [showSavedToast, setShowSavedToast] = useState(false);
 
   // las correlatividades se cargan de la base al abrir el plan
   useEffect(() => {
@@ -61,6 +62,13 @@ function PlanDetalle({ plan, onBack, onUpdatePlan }) {
 
     return () => { cancelled = true; };
   }, [plan.id]);
+
+  // la notificación de "guardado" se oculta sola a los 5 segundos
+  useEffect(() => {
+    if (!showSavedToast) return undefined;
+    const timer = setTimeout(() => setShowSavedToast(false), 5000);
+    return () => clearTimeout(timer);
+  }, [showSavedToast]);
 
   const handleSaveSubjects = async (newSubjects) => {
     try {
@@ -171,7 +179,8 @@ function PlanDetalle({ plan, onBack, onUpdatePlan }) {
 
       setCorrelatives(saved);
       setDraftCorrelatives(saved);
-      setCorrelativeNotice('Las correlatividades se guardaron correctamente.');
+      setCorrelativeNotice('');
+      setShowSavedToast(true);
     } catch (error) {
       setCorrelativeNotice(error.message);
     } finally {
@@ -543,6 +552,19 @@ function PlanDetalle({ plan, onBack, onUpdatePlan }) {
 
   return (
     <section className="plan-detalle-page">
+      {showSavedToast && (
+        <div className="plan-toast" role="status">
+          <CircleCheck size={22} className="plan-toast-icon" />
+          <div className="plan-toast-text">
+            <strong>Correlatividades actualizadas</strong>
+            <span>Los cambios se guardaron correctamente.</span>
+          </div>
+          <button type="button" className="plan-toast-close" aria-label="Cerrar notificación" onClick={() => setShowSavedToast(false)}>
+            <X size={18} />
+          </button>
+        </div>
+      )}
+
       <nav className="plan-detalle-breadcrumb" aria-label="Breadcrumb">
         <button type="button" onClick={onBack}>Planes de Estudio</button>
         <ChevronRight size={14} />
