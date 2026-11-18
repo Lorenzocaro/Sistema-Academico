@@ -4,6 +4,7 @@ import CargarMaterias from './LoadSubjects';
 import EditSubjectModal from './EditSubjectModal';
 import ConfirmCorrelativesModal from './ConfirmCorrelativesModal';
 import EditPlanModal from './EditPlanModal';
+import ArchivePlanModal from './ArchivePlanModal';
 import { plansApi } from '../../components/plans/plansApi';
 import { useAsyncResource } from '../../../../hooks/useAsyncResource';
 
@@ -45,7 +46,7 @@ function PlanDetalle({ plan, onBack, onUpdatePlan }) {
   const [correlativeMode, setCorrelativeMode] = useState('assign'); // 'assign' | 'view'
   const [expandedSubjectId, setExpandedSubjectId] = useState(null);
   const [showSavedToast, setShowSavedToast] = useState(false);
-  const [isArchiving, setIsArchiving] = useState(false);
+  const [isArchiveModalOpen, setIsArchiveModalOpen] = useState(false);
 
   // las correlatividades se cargan de la base al abrir el plan
   useEffect(() => {
@@ -86,17 +87,8 @@ function PlanDetalle({ plan, onBack, onUpdatePlan }) {
   };
 
   const handleToggleArchive = async () => {
-    const message = plan.activo
-      ? `¿Archivar el plan "${plan.nombre}"?`
-      : `¿Restaurar el plan "${plan.nombre}"?`;
-    if (!window.confirm(message)) return;
-
-    setIsArchiving(true);
-    try {
-      await onUpdatePlan(plan.id, { activo: !plan.activo });
-    } finally {
-      setIsArchiving(false);
-    }
+    await onUpdatePlan(plan.id, { activo: !plan.activo });
+    setIsArchiveModalOpen(false);
   };
 
   const handleUpdateSubject = async (updatedSubject) => {
@@ -614,7 +606,7 @@ function PlanDetalle({ plan, onBack, onUpdatePlan }) {
         {activeTab === 'Resumen' && (
           <div className="plan-detalle-actions">
             <button type="button" className="plan-detalle-button" onClick={() => setIsEditingPlan(true)}>Editar</button>
-            <button type="button" className="plan-detalle-button" onClick={handleToggleArchive} disabled={isArchiving}>
+            <button type="button" className="plan-detalle-button" onClick={() => setIsArchiveModalOpen(true)}>
               {plan.activo ? 'Archivar' : 'Restaurar'}
             </button>
           </div>
@@ -664,6 +656,14 @@ function PlanDetalle({ plan, onBack, onUpdatePlan }) {
           plan={plan}
           onClose={() => setIsEditingPlan(false)}
           onSave={handleUpdatePlan}
+        />
+      )}
+
+      {isArchiveModalOpen && (
+        <ArchivePlanModal
+          plan={plan}
+          onClose={() => setIsArchiveModalOpen(false)}
+          onConfirm={handleToggleArchive}
         />
       )}
     </section>
