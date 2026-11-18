@@ -1,4 +1,6 @@
 import { request } from './httpClient';
+import { registrationService } from './registrationService';
+import { obtenerHorariosMateria } from './subjectScheduleService';
 
 async function consultarComisiones(materiaId) {
   const query = materiaId
@@ -12,11 +14,18 @@ export const comisionesService = {
   consultarComisiones,
 
   asignarComisionesAleatoriamente: async () => {
-    const comisiones = await consultarComisiones();
-    const materias = [
+    const [comisiones, materiasPrimerAnio] = await Promise.all([
+      consultarComisiones(),
+      registrationService.consultarMaterias(1),
+    ]);
+    const materiasPrimerAnioIds = new Set(
+      materiasPrimerAnio.map((materia) => Number(materia.id))
+    );
+    const materiasCandidatas = [
       ...new Map(
         comisiones
           .filter((comision) =>
+            materiasPrimerAnioIds.has(Number(comision.materiaId)) &&
             ['A', 'B'].includes(comision.seccion?.trim().toUpperCase())
           )
           .map((comision) => [
@@ -28,47 +37,53 @@ export const comisionesService = {
           ])
       ).values(),
     ];
+    const errores = [];
+    const resultadosHorarios = await Promise.all(
+      materiasCandidatas.map(async (materia) => {
+          try {
+            const [horariosA, horariosB] = await Promise.all([
+              obtenerHorariosMateria(materia.id, 'A'),
+              obtenerHorariosMateria(materia.id, 'B'),
+            ]);
+
+            if (horariosA.length > 0 && horariosB.length > 0) {
+              return materia;
+            }
+
+            if (horariosA.length > 0 || horariosB.length > 0) {
+              errores.push(
+                `${materia.nombre}: faltan horarios configurados para las comisiones A y B.`
+              );
+            }
+
+            return null;
+          } catch (error) {
+            errores.push(`${materia.nombre}: ${error.message}`);
+            return null;
+          }
+      })
+    );
+    const materias = resultadosHorarios.filter(Boolean);
 
     if (materias.length === 0) {
       return {
-        mensaje: 'No hay materias con comisiones configuradas para asignar.',
-        errores: [],
+          mensaje: 'No hay materias de primer año con horarios configurados para A y B.',
+          errores,
       };
     }
 
-    const errores = [];
-    let totalAsignado = 0;
-    let materiasProcesadas = 0;
-
-    for (const materia of materias) {
-      try {
-        const resultado = await request(
-          '/api/comisiones/asignacion-aleatoria-masiva',
-          {
-            method: 'POST',
-            body: JSON.stringify({ materiaId: Number(materia.id) }),
-          }
-        );
-
-        materiasProcesadas++;
-        totalAsignado += resultado.totalAsignado;
-      } catch (error) {
-        console.error(
-          `No se pudieron asignar comisiones para ${materia.nombre}:`,
-          error
-        );
-        errores.push(`${materia.nombre}: ${error.message}`);
+    const resultado = await request(
+      '/api/comisiones/asignacion-aleatoria-masiva',
+      {
+        method: 'POST',
+        body: JSON.stringify({
+          materiaIds: materias.map((materia) => Number(materia.id)),
+        }),
       }
-    }
-
-    const mensaje = totalAsignado > 0
-      ? `Se asignaron ${totalAsignado} inscripciones en ${materiasProcesadas} materias.`
-      : 'Todos los alumnos ya tienen una comisión asignada.';
+    );
 
     return {
-      mensaje: errores.length > 0
-        ? `${mensaje} Hubo problemas en ${errores.length} materias.`
-        : mensaje,
+      mensaje: resultado.mensaje,
       errores,
     };
   },

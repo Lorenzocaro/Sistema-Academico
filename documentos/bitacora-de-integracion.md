@@ -13,16 +13,16 @@ Registro de todo lo que entró a `development`: qué trajo cada equipo, cómo se
    - combina las ramas de todos los equipos para encontrar conflictos antes de que lleguen a `development`.
 3. Lo que funciona se integra. Si algo falla, se le informa al equipo para que lo corrija en su rama: el E1 no corrige el código de otros equipos.
 
-## Estado al 08/11/2026
+## Estado al 13/11/2026
 
 Los cuatro equipos ya tienen su trabajo integrado en `development`.
 
 | Equipo | Qué está integrado | Qué falta |
 |---|---|---|
 | **E1** — Acceso e Integración | Login, cierre y vencimiento de sesión (con renovación automática), roles y permisos, menú por rol, API y pantalla de gestión de usuarios. | Auditoría de accesos (S2-9), menú según los permisos de la API (S2-10) y recuperación de contraseña (S2-7, sin servidor SMTP). |
-| **E2** — Secretaría | Inscripción a 1.º año, ver y modificar estudiantes, comisiones con asignación automática, gestión de cupos, docentes con asignación de materias y horarios por comisión, con las pantallas conectadas a la API. | Pasar su backend a las cuatro capas y hacer el resumen de inscripciones con menos pedidos a la API. |
-| **E3** — Gestión Académica | API y pantallas de planes de estudio y materias, pantalla de correlatividades. | Guardar las correlatividades en la base, bajas y cursos. |
-| **E4** — Inscripciones | Materias disponibles, validación de correlativas, inscripción desde la pantalla y "Mis inscripciones" leyendo la base. | Pasar la validación de correlativas a repositorio y definir el período de inscripción. |
+| **E2** — Secretaría | Inscripción a 1.º año, ver y modificar estudiantes, comisiones con asignación automática, gestión de cupos, docentes con asignación de materias y horarios por comisión, con las pantallas conectadas a la API. | Hacer el resumen de inscripciones con menos pedidos a la API. |
+| **E3** — Gestión Académica | API y pantallas de planes de estudio y materias, correlatividades guardadas en la base con sus validaciones, y quitar materias de un plan. | Bajas de planes, cursos y el arreglo de `useSubmit`. |
+| **E4** — Inscripciones | Materias disponibles, validación de correlativas, inscripción desde la pantalla y "Mis inscripciones" leyendo la base. | Definir el período de inscripción y ofrecer solo materias de 2.º y 3.º año. |
 
 ## Línea de tiempo
 
@@ -43,6 +43,9 @@ Los cuatro equipos ya tienen su trabajo integrado en `development`.
 | 28/10 | Integración del E1 (pantalla de usuarios y renovación de sesión), del E3 (PR #8) y del E4 (PR #5). Revisión del E2 con guía de correcciones. |
 | 29/10 | El E2 aplica las correcciones y se integra. Los cuatro equipos quedan en `development`. |
 | 08/11 | Integración del E3 y el E4 con sus pases a repositorios. El E1 pasa a las cuatro capas. Se define la regla controller, service, repository y base. |
+| 13/11 | Se integran las correlatividades del E3 (PR #9) y el repositorio de validación del E4 (PR #10). El pase a capas del E2 queda en revisión. |
+| 13/11 | El E2 corrige la asignación automática y se integra su pase a capas (PR #11). Todo el backend cumple la regla de las cuatro capas. |
+| 13/11 | Se promueve `development` a `testing`, con todas las pruebas corridas sobre la versión integrada. |
 
 ## Integraciones
 
@@ -138,6 +141,63 @@ Los cuatro equipos ya tienen su trabajo integrado en `development`.
 - **Conflicto resuelto:** `Program.cs`, donde E3 y E4 agregaban líneas en el mismo lugar.
 - **Dato para las demos:** una materia solo aparece disponible para el estudiante si tiene docente asignado con comisión. Primero hay que asignar los docentes.
 
+### 13/11 — Correlatividades del E3 (PR #9) y validación del E4 (PR #10)
+
+- **E4 (PR #10):** `PrerequisiteValidationService` dejó de usar la base directo: sus consultas pasaron a `PrerequisiteValidationRepository`. Las respuestas no cambiaron.
+- **E3 (PR #9):**
+  - las correlatividades se guardan en la tabla `Prerequisites`, con controller, service y repository;
+  - se rechazan los ciclos, las repetidas, las correlativas de otro plan y la materia como correlativa de sí misma;
+  - la pantalla carga las correlativas guardadas y, al guardar, manda todas las materias que cambiaron;
+  - se puede quitar una materia de un plan, salvo que tenga evaluaciones; al quitarla se borran sus correlativas.
+- **Resultado:** el circuito de correlativas quedó completo. La secretaría las carga desde la pantalla y el estudiante ve bloqueada la materia, con el nombre de la que le falta. Ya no hace falta cargarlas por SQL.
+- **Corrección pedida al E3 antes de integrar (09/11):** al guardar solo se guardaba la materia seleccionada, y lo marcado en las otras se perdía. Lo corrigieron en el mismo PR.
+- **Verificación**, sobre bases nuevas:
+  - frontend y backend compilan, y el lint quedó en 0 errores;
+  - correlativas, validación y quitar materias, por API y por pantalla: 49 de 49;
+  - flujo de inscripción desde la pantalla del estudiante: 8 de 8;
+  - la API del E1 respondió igual que antes en 78 pedidos, y el bloqueo de cuenta por intentos fallidos sigue funcionando;
+  - regresión de API: E1, E3 y E4 25 de 25; E2 24 de 26, con las mismas dos diferencias esperadas del 08/11;
+  - pantallas de los cuatro equipos: mismo resultado antes y después de integrar.
+- **E2 (rama `e2`, sin Pull Request): no se integró.** El pase a las cuatro capas está hecho y cumple la regla. Pero en el mismo cambio la asignación automática de comisiones pasó a inscribir a todos los estudiantes del sistema en cada materia con horarios en A y B, de cualquier año y sin validar correlativas. En la prueba, un estudiante quedó inscripto en una materia de 2.º año con la correlativa sin aprobar. Lo corrigieron y se integró el mismo día, con el PR #11.
+
+### 13/11 — Capas del E2 (PR #11)
+
+- **E2 (PR #11):**
+  - `TeachersController`, `InscripcionesService`, `StudentService` y `SubjectScheduleService` dejaron de usar la base directo: sus consultas pasaron a repositorios;
+  - las reglas de comisiones y de asignación de docentes pasaron de los repositorios a los services;
+  - la asignación automática de comisiones trabaja solo con materias de 1.º año y no crea inscripciones: empareja entre A y B a los estudiantes ya inscriptos;
+  - cambios de diseño en las pantallas de inscripciones, estudiantes y docentes.
+- **Resultado:** ningún controller ni service usa la base directo. Todo el backend recorre controller, service, repository y base.
+- **Corrección pedida al E2 antes de integrar:** en la primera entrega, la asignación automática inscribía a todos los estudiantes del sistema en cada materia, de cualquier año y sin validar correlativas, y traía una copia de dos archivos del E4. Lo corrigieron en el mismo PR.
+- **Ajuste del E1 al integrar:** `appsettings.json` llegó con el servidor de la máquina de Alan (`Server=ALAN`). Se volvió a `localhost`, porque con ese valor el backend de los demás no conecta. Las conexiones personales van con user-secrets.
+- **Cambio en la API:** el pedido de la asignación automática pasó de `{ materiaId }` a `{ materiaIds: [...] }`, y exige horarios en las comisiones A y B.
+- **Base del PR:** se abrió contra `production` en vez de `development`. Se integró en `development`, como los demás.
+- **Verificación**, sobre bases nuevas:
+  - frontend y backend compilan, y el lint quedó en 0 errores;
+  - asignación automática: 18 de 18. Rechaza materias de 2.º año, no crea inscripciones, deja el reparto parejo y repetirla no cambia nada;
+  - correlativas, validación y quitar materias: 49 de 49; flujo de inscripción del estudiante: 8 de 8;
+  - la API del E1 respondió igual que antes en 78 pedidos, y el bloqueo de cuenta por intentos fallidos sigue funcionando;
+  - regresión de API: E1, E3 y E4 25 de 25; E2 24 de 26, con las mismas dos diferencias esperadas del 08/11;
+  - pantallas de los cuatro equipos: mismo resultado antes y después de integrar.
+
+### 13/11 — Promoción a `testing`
+
+- `testing` pasó de la versión del 06/10 a la versión con los cuatro equipos integrados.
+- **Antes de promover** se corrió todo sobre esa versión, con bases nuevas:
+  - ningún controller ni service usa la base directo;
+  - frontend y backend compilan, y el lint quedó en 0 errores;
+  - asignación automática de comisiones: 18 de 18;
+  - correlativas, validación y quitar materias: 49 de 49; flujo de inscripción del estudiante: 8 de 8;
+  - la API del E1 respondió igual en 78 pedidos, y el bloqueo de cuenta por intentos fallidos funciona;
+  - regresión de API: E1, E3 y E4 25 de 25; E2 24 de 26, con las dos diferencias esperadas;
+  - pantallas de los cuatro equipos: mismo resultado que antes de integrar.
+- **Ensayo de la demo**, con el sistema completo y datos de ejemplo: 27 de 27 pasos en el navegador, desde el alta de un usuario hasta la inscripción de un estudiante con correlativas.
+- **Observaciones del ensayo:**
+  - un estudiante creado en Usuarios no tiene perfil de estudiante y no aparece en Inscripciones; un docente creado en Usuarios no aparece en Docentes hasta tener materias asignadas. Falta unir el alta de usuarios del E1 con las pantallas del E2;
+  - la pantalla "Modificar estudiante" de 1.º año ofrece las materias de todos los años;
+  - la columna DNI de Docentes muestra el CUIL, y en Usuarios el rol docente figura como "Teacher";
+  - la inscripción del estudiante no muestra un mensaje de confirmación: la materia pasa a "Mis Inscripciones".
+
 ## Decisiones tomadas
 
 | Tema | Decisión |
@@ -151,34 +211,33 @@ Los cuatro equipos ya tienen su trabajo integrado en `development`.
 | Recuperación de contraseña | Se posterga: no hay servidor SMTP. Mientras tanto, el secretario puede asignar una contraseña nueva editando al usuario. |
 | Horarios de materias | Los consulta cualquier usuario con sesión (el estudiante también los necesita). Solo el Secretario los carga. |
 
-## Pendientes por equipo (al 08/11/2026)
+## Pendientes por equipo (al 13/11/2026)
 
 ### E1
 
 - Auditoría de accesos (S2-9): todavía no hay código.
 - Menú según los permisos de la API (S2-10): el menú sigue siendo una lista fija en `permisos.js`.
 - Recuperación de contraseña (S2-7), cuando haya SMTP.
+- Las pantallas de recuperación de contraseña y de consulta de auditoría están en el fork `0lypus`, con datos simulados y sin Pull Request: se integran cuando tengan backend.
 - Actualizar el paquete `System.Security.Cryptography.Pkcs` 9.0.11, que tiene vulnerabilidades conocidas.
-- Promover `development` a `testing` y a `production`: las dos siguen en la versión del 06/10, sin el trabajo de los equipos.
+- Promover `testing` a `production` cuando se apruebe la versión del 13/11: `production` sigue en la del 06/10.
+- Unir el alta de usuarios con los perfiles: un estudiante o un docente creado en Usuarios todavía no aparece en las pantallas de Secretaría.
 - Subir la versión aprobada al GitLab del instituto para el deploy: `https://git.icgb.com.ar/2do2026/gestion-academica`.
 
 ### E2
 
-- `TeachersController` usa la base directo.
-- `InscripcionesService`, `StudentService` y `SubjectScheduleService` usan la base directo: les falta repositorio.
-- En comisiones y docentes las reglas de negocio están en el repositorio y los services solo pasan el llamado: las reglas van en el service.
 - El resumen de inscripciones hace un pedido a la API por cada estudiante; conviene un endpoint que lo devuelva armado.
+- Los Pull Requests van contra `development`: el #11 se abrió contra `production`.
+- Es la segunda vez que llega `Server=ALAN` en `appsettings.json`: la conexión personal va con user-secrets, como explica el README.
 - Todos los commits son de Alan: faltan los aportes del resto del equipo.
 
 ### E3
 
-- Las correlatividades solo se guardan en la pantalla: al recargar se pierden. Falta el endpoint para guardarlas en la tabla `Prerequisites`, que es la que usa el E4 para validar. Hoy nadie puede cargar correlativas.
 - `useSubmit` no vuelve `isSubmitting` a `false` cuando la operación sale bien.
-- Bajas de planes y materias, y cursos.
+- Bajas de planes y cursos.
 
 ### E4
 
-- `PrerequisiteValidationService` usa la base directo: le falta repositorio.
 - El período de inscripción está fijo: dice "Sin definir" y siempre figura abierto.
 - Ofrece también materias de 1.º año, y su alcance es 2.º y 3.º.
 - Pasaron `enrollmentService` y `prerequisiteValidationService` a `src/services/estudiante/`. La regla acordada es que esa carpeta tiene solo el service del model Student: hay que decidir si se acepta o vuelven a la raíz de `services/`.
@@ -188,21 +247,21 @@ Los cuatro equipos ya tienen su trabajo integrado en `development`.
 - Hay dos controllers de estudiantes: el del E1 (`StudentsController`, `/api/students`) y el del E2 (`StudentController`, `/api/estudiantes`). Hay que decidir cuál queda para cada cosa.
 - Aprobar formalmente la tabla `SubjectSchedules` (horarios por materia y comisión), que entró con el E2.
 
-## Números del proyecto (al 08/11/2026)
+## Números del proyecto (al 13/11/2026)
 
-En `development` hay 113 commits sin contar los merges:
+En `development` hay 124 commits sin contar los merges:
 
 | Integrante | Equipo | Commits |
 |---|---|---|
-| Tomás González | E1 | 20 |
-| Alan Ordóñez | E2 | 17 |
+| Tomás González | E1 | 24 |
+| Alan Ordóñez | E2 | 22 |
 | Lorenzo Caro | E3 | 13 |
 | Joaquín Olmedo | E1 | 12 |
 | Agustín Coccia | E4 | 11 |
-| Federico Petta | E3 | 9 |
+| Federico Petta | E3 | 10 |
 | Damián Palacios | E1 | 7 |
 | Carlos Luque Heredia | E1 | 7 |
-| Facundo Pesa Giménez | E4 | 6 |
+| Facundo Pesa Giménez | E4 | 7 |
 | Esteban Soria | E4 | 5 |
 | Franco Petta | E1 | 4 |
 | Jeremías Herrera | E4 | 2 |
