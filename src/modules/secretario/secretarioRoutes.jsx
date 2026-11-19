@@ -7,6 +7,7 @@ const PlanesEstudio = lazy(() => import('./pages/PlanesEstudio/PlanesEstudio'));
 const Materias = lazy(() => import('./pages/Materias/Materias'));
 const InscripcionesContainer = lazy(() => import('./pages/Inscripciones/InscripcionesContainer'));
 const Usuarios = lazy(() => import('./pages/Usuarios/Usuarios'));
+const Auditoria = lazy(() => import('./pages/Auditoria/Auditoria'));
 const AppLayout = lazy(() => import('../../core/layouts/AppLayout'));
 const ManageSlots = lazy(() => import('./pages/Inscripciones/ManageSlots'));
 const ModificarEstudiante = lazy(() => import('./pages/Inscripciones/ModificarEstudiante'));
@@ -31,6 +32,7 @@ export const secretarioRoutes = (rolSimulado) => (
     <Route path="materias" element={withSuspense(Materias)} />
     <Route path="inscripciones" element={withSuspense(InscripcionesContainer)} />
     <Route path="usuarios" element={withSuspense(Usuarios)} />
+    <Route path="auditoria" element={withSuspense(Auditoria)} />
     <Route path="manage-slots" element={withSuspense(ManageSlots)} />
     <Route path="estudiantes/:id/modificar" element={withSuspense(ModificarEstudiante)} />
     <Route path="estudiantes/:id/visualizar" element={withSuspense(VisualizarEstudiante)} />

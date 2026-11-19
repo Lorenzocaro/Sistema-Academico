@@ -10,11 +10,11 @@ El sistema tiene dos perfiles: **Secretario** y **Estudiante**.
 
 ## Dónde estamos
 
-Actualizado al 13/11/2026. Los cuatro equipos ya tienen su trabajo integrado en `development`:
+Actualizado al 18/11/2026. Los cuatro equipos ya tienen su trabajo integrado en `development`:
 
 | Equipo | Qué ya está integrado | Qué sigue |
 |---|---|---|
-| **E1** — Acceso e Integración | Login, cierre y vencimiento de sesión con renovación automática, roles y permisos, menú por rol, y la API y la pantalla de usuarios. | Auditoría de accesos, menú según los permisos de la API y recuperación de contraseña. |
+| **E1** — Acceso e Integración | Login, cierre y vencimiento de sesión con renovación automática, roles y permisos, menú según los permisos de la API, usuarios con el perfil de cada rol y auditoría de accesos. | Recuperación de contraseña, cuando el sistema esté desplegado y haya servidor de correo. |
 | **E2** — Secretaría | Inscripción a 1.º año, ver y modificar estudiantes, comisiones y cupos, docentes con sus materias y horarios por comisión, con las pantallas conectadas a la API. | Hacer el resumen de inscripciones con menos pedidos a la API. |
 | **E3** — Gestión Académica | API y pantallas de planes de estudio y materias, correlatividades guardadas en la base y quitar materias de un plan. | Bajas de planes y cursos. |
 | **E4** — Inscripciones | Materias disponibles, validación de correlativas, inscripción desde la pantalla y "Mis inscripciones". | Definir el período de inscripción y ofrecer solo materias de 2.º y 3.º año. |
@@ -197,7 +197,9 @@ Cada uno tiene su propia copia de la base. Se crea con el script del repositorio
 1. Abrí Management Studio y conectate a tu servidor con **Windows Authentication**.
 2. Abrí el archivo `database/AcademicSystem.sql` y apretá **F5**.
 
-Se crea la base `AcademicSystem` con sus 22 tablas. Si el script cambia, lo volvés a correr: no borra nada ni duplica datos.
+Se crea la base `AcademicSystem` con sus 24 tablas. Si el script cambia, lo volvés a correr: no borra nada ni duplica datos.
+
+> **El 18/11 el script sumó la tabla de auditoría.** Si ya tenías la base creada, volvé a correrlo. Sin esa tabla el sistema funciona igual, pero no guarda el registro de accesos.
 
 ### 2. Crear la clave del login (una sola vez)
 
@@ -289,6 +291,7 @@ Todas las llamadas a la API pasan por `src/services/`. Hay un archivo por cada c
 | `permissionsService.js` | `PermissionsController` | Permisos del usuario logueado |
 | `healthService.js` | `HealthController` | Estado de la API |
 | `usersService.js` | `UsersController` | Usuarios |
+| `auditService.js` | `AccessAuditController` | Auditoría de accesos |
 | `rolesService.js` | `RolesController` | Roles |
 | `studyPlanService.js` | `StudyPlanController` | Planes de estudio |
 | `subjectService.js` | `SubjectController` | Materias |

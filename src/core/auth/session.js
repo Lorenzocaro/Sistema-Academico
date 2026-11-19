@@ -39,6 +39,14 @@ export function actualizarTokens({ token, refreshToken }) {
   almacenSesion().setItem(CLAVE, JSON.stringify({ ...sesion, token, refreshToken }));
 }
 
+// Guarda los módulos permitidos junto con la sesión, para no esperar a la API al recargar la página.
+export function guardarModulos(modulos) {
+  const sesion = obtenerSesion();
+  if (!sesion) return;
+
+  almacenSesion().setItem(CLAVE, JSON.stringify({ ...sesion, modulos }));
+}
+
 export function marcarActividad(ahora = Date.now()) {
   if (!obtenerSesion()) return;
 

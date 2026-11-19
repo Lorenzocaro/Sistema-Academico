@@ -15,7 +15,7 @@ public interface IUserRepository
 
     Task<User?> FindAsync(int id, CancellationToken ct);
 
-    Task<bool> RoleExistsAsync(int roleId, CancellationToken ct);
+    Task<User?> FindWithProfilesAsync(int id, CancellationToken ct);
 
     Task<string?> GetRoleNameAsync(int roleId, CancellationToken ct);
 
@@ -28,6 +28,12 @@ public interface IUserRepository
     Task<bool> HasStudentProfileAsync(int userId, CancellationToken ct);
 
     Task<bool> HasSecretaryProfileAsync(int userId, CancellationToken ct);
+
+    Task<bool> HasTeacherProfileAsync(int userId, CancellationToken ct);
+
+    Task<bool> StudentDniOrRecordNumberExistsAsync(string dni, string recordNumber, CancellationToken ct);
+
+    Task<bool> RecordNumberExistsForOtherAsync(int userId, string recordNumber, CancellationToken ct);
 
     Task<bool> IsActiveWithRoleAsync(int userId, string roleName, CancellationToken ct);
 

@@ -6,6 +6,7 @@ using AcademicSystem.Data.Context;
 using AcademicSystem.Data.Repositories;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization.Policy;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 
@@ -26,6 +27,7 @@ builder.Services.AddScoped<IRoleRepository, RoleRepository>();
 builder.Services.AddScoped<IStudentProfileRepository, StudentProfileRepository>();
 builder.Services.AddScoped<IAcademicSecretaryRepository, AcademicSecretaryRepository>();
 builder.Services.AddScoped<IPrerequisiteRepository, PrerequisiteRepository>();
+builder.Services.AddScoped<IAccessAuditRepository, AccessAuditRepository>();
 
 // Business: each team registers its services here, one line per service.
 builder.Services.AddScoped<IHealthService, HealthService>();
@@ -37,6 +39,7 @@ builder.Services.AddScoped<IPermissionService, PermissionService>();
 builder.Services.AddScoped<IRoleService, RoleService>();
 builder.Services.AddScoped<IStudentProfileService, StudentProfileService>();
 builder.Services.AddScoped<IAcademicSecretaryService, AcademicSecretaryService>();
+builder.Services.AddScoped<IAccessAuditService, AccessAuditService>();
 // validacion del JWT. La clave vive en user-secrets, nunca en el repo.
 var jwtKey = builder.Configuration["Jwt:Key"]
     ?? throw new InvalidOperationException("Falta 'Jwt:Key'. Configurala con user-secrets.");
@@ -68,6 +71,7 @@ builder.Services.AddAuthorization(options =>
         .RequireAuthenticatedUser()
         .Build();
 });
+builder.Services.AddSingleton<IAuthorizationMiddlewareResultHandler, AuditAuthorizationMiddlewareResultHandler>();
 
 builder.Services.AddScoped<IStudyPlanService, StudyPlanService>();
 builder.Services.AddScoped<IPrerequisiteService, PrerequisiteService>();
