@@ -7,6 +7,7 @@ import EditPlanModal from './EditPlanModal';
 import ArchivePlanModal from './ArchivePlanModal';
 import { plansApi } from '../../components/plans/plansApi';
 import { useAsyncResource } from '../../../../hooks/useAsyncResource';
+import { useSubmit } from '../../../../hooks/useSubmit';
 
 const tabs = ['Resumen', 'Materias', 'Materias por año', 'Correlatividades'];
 const YEARS = ['1°', '2°', '3°'];
@@ -20,6 +21,47 @@ function Field({ label, value }) {
     <div className="plan-detalle-field">
       <span className="field-label">{label}</span>
       <span className="field-value">{value ?? '—'}</span>
+    </div>
+  );
+}
+
+function DeleteSubjectModal({ subject, onClose, onConfirm }) {
+  const { submit, isSubmitting, submitError } = useSubmit(onConfirm);
+
+  return (
+    <div className="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="delete-subject-title">
+      <div className="modal-content confirm-correlatives-modal">
+        <div className="modal-header">
+          <div className="modal-header-title">
+            <Trash2 size={20} />
+            <div>
+              <h2 id="delete-subject-title">Eliminar materia</h2>
+              <p>Revisá la materia que vas a eliminar antes de confirmar</p>
+            </div>
+          </div>
+          <button type="button" aria-label="Cerrar" onClick={onClose} disabled={isSubmitting}><X size={20} /></button>
+        </div>
+
+        <div className="confirm-correlatives-body">
+          <h3>Materia</h3>
+          <p className="confirm-correlatives-subject">{subject.orden} - {subject.materia}</p>
+
+          <p className="confirm-correlatives-empty">
+            Se eliminará de este plan de estudio. Esta acción no se puede deshacer.
+          </p>
+
+          {submitError && <p className="field-error" role="alert">{submitError}</p>}
+
+          <div className="modal-footer">
+            <button type="button" className="modal-cancel-button" onClick={onClose} disabled={isSubmitting}>
+              Cancelar
+            </button>
+            <button type="button" className="modal-submit-button" onClick={() => submit()} disabled={isSubmitting}>
+              {isSubmitting ? 'Eliminando...' : 'Aceptar'}
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
@@ -47,6 +89,7 @@ function PlanDetalle({ plan, onBack, onUpdatePlan }) {
   const [expandedSubjectId, setExpandedSubjectId] = useState(null);
   const [showSavedToast, setShowSavedToast] = useState(false);
   const [isArchiveModalOpen, setIsArchiveModalOpen] = useState(false);
+  const [subjectToDelete, setSubjectToDelete] = useState(null);
 
   // las correlatividades se cargan de la base al abrir el plan
   useEffect(() => {
@@ -97,32 +140,30 @@ function PlanDetalle({ plan, onBack, onUpdatePlan }) {
     setEditingSubject(null);
   };
 
-  const handleDeleteSubject = async (subject) => {
-    if (!window.confirm(`¿Eliminar la materia "${subject.materia}" de este plan?`)) return;
+  const handleConfirmDeleteSubject = async () => {
+    const subject = subjectToDelete;
 
-    try {
-      await plansApi.quitarMateria(plan.id, subject.subjectId);
+    await plansApi.quitarMateria(plan.id, subject.subjectId);
 
-      setMaterias((current) => current.filter((materia) => materia.id !== subject.id));
+    setMaterias((current) => current.filter((materia) => materia.id !== subject.id));
 
-      const cleanUp = (source) => {
-        const result = {};
-        Object.entries(source).forEach(([id, list]) => {
-          if (String(id) === String(subject.subjectId)) return;
-          result[id] = list.filter((correlativeId) => correlativeId !== subject.subjectId);
-        });
-        return result;
-      };
+    const cleanUp = (source) => {
+      const result = {};
+      Object.entries(source).forEach(([id, list]) => {
+        if (String(id) === String(subject.subjectId)) return;
+        result[id] = list.filter((correlativeId) => correlativeId !== subject.subjectId);
+      });
+      return result;
+    };
 
-      setCorrelatives(cleanUp);
-      setDraftCorrelatives(cleanUp);
+    setCorrelatives(cleanUp);
+    setDraftCorrelatives(cleanUp);
 
-      if (selectedSubjectId === subject.subjectId) {
-        setSelectedSubjectId(null);
-      }
-    } catch (error) {
-      window.alert(`No se pudo eliminar la materia: ${error.message}`);
+    if (selectedSubjectId === subject.subjectId) {
+      setSelectedSubjectId(null);
     }
+
+    setSubjectToDelete(null);
   };
 
   const handleTabChange = (tab) => {
@@ -510,7 +551,7 @@ function PlanDetalle({ plan, onBack, onUpdatePlan }) {
                     <button type="button" className="subject-edit-button" aria-label={`Editar ${materia.materia}`} onClick={() => setEditingSubject(materia)}>
                       <Pencil size={16} />
                     </button>
-                    <button type="button" className="subject-delete-button" aria-label={`Eliminar ${materia.materia}`} onClick={() => handleDeleteSubject(materia)}>
+                    <button type="button" className="subject-delete-button" aria-label={`Eliminar ${materia.materia}`} onClick={() => setSubjectToDelete(materia)}>
                       <Trash2 size={16} />
                     </button>
                   </span>
@@ -664,6 +705,14 @@ function PlanDetalle({ plan, onBack, onUpdatePlan }) {
           plan={plan}
           onClose={() => setIsArchiveModalOpen(false)}
           onConfirm={handleToggleArchive}
+        />
+      )}
+
+      {subjectToDelete && (
+        <DeleteSubjectModal
+          subject={subjectToDelete}
+          onClose={() => setSubjectToDelete(null)}
+          onConfirm={handleConfirmDeleteSubject}
         />
       )}
     </section>
