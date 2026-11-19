@@ -18,7 +18,9 @@ public sealed class AuditAuthorizationMiddlewareResultHandler(
         AuthorizationPolicy policy,
         PolicyAuthorizationResult authorizeResult)
     {
-        if (authorizeResult.Forbidden || authorizeResult.Challenged)
+        // Solo se registra a quien tiene sesión y no tiene permiso. Un pedido sin token o con el token vencido
+        // no se registra: pasa cada vez que la pantalla renueva la sesión y llenaría el registro de ruido.
+        if (authorizeResult.Forbidden)
         {
             int? userId = int.TryParse(context.User.FindFirst("sub")?.Value, out var parsedUserId)
                 ? parsedUserId

@@ -17,7 +17,8 @@ public sealed class AccessAuditService(
         string result,
         CancellationToken cancellationToken = default)
     {
-        userIdentifier = Limit(userIdentifier, 255);
+        // Un identificador vacío se guarda como nulo, para que la consulta lo muestre como usuario desconocido.
+        userIdentifier = string.IsNullOrWhiteSpace(userIdentifier) ? null : Limit(userIdentifier.Trim(), 255);
         ipAddress = Limit(ipAddress, 45);
         module = Limit(module, 256) ?? "/";
 

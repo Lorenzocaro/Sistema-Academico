@@ -15,7 +15,8 @@ public class PermissionService : IPermissionService
             ["planes-de-estudio"] = ["ver", "crear", "editar", "baja", "restaurar"],
             ["docentes"] = ["ver", "crear", "editar"],
             ["inscripciones"] = ["ver"],
-            ["usuarios"] = ["ver", "crear", "editar", "baja"]
+            ["usuarios"] = ["ver", "crear", "editar", "baja"],
+            ["auditoria"] = ["ver"]
         },
         [RoleNames.Student] = new()
         {

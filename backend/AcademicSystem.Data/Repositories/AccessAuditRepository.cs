@@ -74,7 +74,7 @@ public sealed class AccessAuditRepository(AcademicSystemContext context) : IAcce
             command.CommandText = """
                 SELECT e.Id, e.UserId,
                        COALESCE(NULLIF(LTRIM(RTRIM(CONCAT(u.FirstName, N' ', u.LastName))), N''),
-                                e.UserIdentifier,
+                                NULLIF(e.UserIdentifier, N''),
                                 CASE WHEN e.UserId IS NULL THEN N'Usuario desconocido'
                                      ELSE CONCAT(N'Usuario ', e.UserId) END) AS [User],
                        e.OccurredAt, e.IpAddress, e.Module, e.EventType, e.Result
