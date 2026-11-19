@@ -5,9 +5,9 @@ import EditSubjectModal from './EditSubjectModal';
 import ConfirmCorrelativesModal from './ConfirmCorrelativesModal';
 import EditPlanModal from './EditPlanModal';
 import ArchivePlanModal from './ArchivePlanModal';
+import DeleteSubjectModal from './DeleteSubjectModal';
 import { plansApi } from '../../components/plans/plansApi';
 import { useAsyncResource } from '../../../../hooks/useAsyncResource';
-import { useSubmit } from '../../../../hooks/useSubmit';
 
 const tabs = ['Resumen', 'Materias', 'Materias por año', 'Correlatividades'];
 const YEARS = ['1°', '2°', '3°'];
@@ -21,47 +21,6 @@ function Field({ label, value }) {
     <div className="plan-detalle-field">
       <span className="field-label">{label}</span>
       <span className="field-value">{value ?? '—'}</span>
-    </div>
-  );
-}
-
-function DeleteSubjectModal({ subject, onClose, onConfirm }) {
-  const { submit, isSubmitting, submitError } = useSubmit(onConfirm);
-
-  return (
-    <div className="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="delete-subject-title">
-      <div className="modal-content confirm-correlatives-modal">
-        <div className="modal-header">
-          <div className="modal-header-title">
-            <Trash2 size={20} />
-            <div>
-              <h2 id="delete-subject-title">Eliminar materia</h2>
-              <p>Revisá la materia que vas a eliminar antes de confirmar</p>
-            </div>
-          </div>
-          <button type="button" aria-label="Cerrar" onClick={onClose} disabled={isSubmitting}><X size={20} /></button>
-        </div>
-
-        <div className="confirm-correlatives-body">
-          <h3>Materia</h3>
-          <p className="confirm-correlatives-subject">{subject.orden} - {subject.materia}</p>
-
-          <p className="confirm-correlatives-empty">
-            Se eliminará de este plan de estudio. Esta acción no se puede deshacer.
-          </p>
-
-          {submitError && <p className="field-error" role="alert">{submitError}</p>}
-
-          <div className="modal-footer">
-            <button type="button" className="modal-cancel-button" onClick={onClose} disabled={isSubmitting}>
-              Cancelar
-            </button>
-            <button type="button" className="modal-submit-button" onClick={() => submit()} disabled={isSubmitting}>
-              {isSubmitting ? 'Eliminando...' : 'Aceptar'}
-            </button>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }
