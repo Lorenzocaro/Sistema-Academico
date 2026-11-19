@@ -13,13 +13,13 @@ Registro de todo lo que entró a `development`: qué trajo cada equipo, cómo se
    - combina las ramas de todos los equipos para encontrar conflictos antes de que lleguen a `development`.
 3. Lo que funciona se integra. Si algo falla, se le informa al equipo para que lo corrija en su rama: el E1 no corrige el código de otros equipos.
 
-## Estado al 13/11/2026
+## Estado al 18/11/2026
 
 Los cuatro equipos ya tienen su trabajo integrado en `development`.
 
 | Equipo | Qué está integrado | Qué falta |
 |---|---|---|
-| **E1** — Acceso e Integración | Login, cierre y vencimiento de sesión (con renovación automática), roles y permisos, menú por rol, API y pantalla de gestión de usuarios. | Auditoría de accesos (S2-9), menú según los permisos de la API (S2-10) y recuperación de contraseña (S2-7, sin servidor SMTP). |
+| **E1** — Acceso e Integración | Login, cierre y vencimiento de sesión (con renovación automática), roles y permisos, menú según los permisos de la API, gestión de usuarios con el perfil de cada rol y auditoría de accesos. | Recuperación de contraseña (S2-7), cuando el sistema esté desplegado y haya servidor de correo. |
 | **E2** — Secretaría | Inscripción a 1.º año, ver y modificar estudiantes, comisiones con asignación automática, gestión de cupos, docentes con asignación de materias y horarios por comisión, con las pantallas conectadas a la API. | Hacer el resumen de inscripciones con menos pedidos a la API. |
 | **E3** — Gestión Académica | API y pantallas de planes de estudio y materias, correlatividades guardadas en la base con sus validaciones, y quitar materias de un plan. | Bajas de planes, cursos y el arreglo de `useSubmit`. |
 | **E4** — Inscripciones | Materias disponibles, validación de correlativas, inscripción desde la pantalla y "Mis inscripciones" leyendo la base. | Definir el período de inscripción y ofrecer solo materias de 2.º y 3.º año. |
@@ -46,6 +46,7 @@ Los cuatro equipos ya tienen su trabajo integrado en `development`.
 | 13/11 | Se integran las correlatividades del E3 (PR #9) y el repositorio de validación del E4 (PR #10). El pase a capas del E2 queda en revisión. |
 | 13/11 | El E2 corrige la asignación automática y se integra su pase a capas (PR #11). Todo el backend cumple la regla de las cuatro capas. |
 | 13/11 | Se promueve `development` a `testing`, con todas las pruebas corridas sobre la versión integrada. |
+| 18/11 | El E1 integra el alta de usuarios con perfil, el menú según permisos, la auditoría de accesos y los arreglos de pantalla. |
 
 ## Integraciones
 
@@ -198,6 +199,31 @@ Los cuatro equipos ya tienen su trabajo integrado en `development`.
   - la columna DNI de Docentes muestra el CUIL, y en Usuarios el rol docente figura como "Teacher";
   - la inscripción del estudiante no muestra un mensaje de confirmación: la materia pasa a "Mis Inscripciones".
 
+### 18/11 — Alta con perfil, menú por permisos, auditoría y pantallas del E1
+
+- **Qué entró:**
+  - **Alta de usuarios con perfil.** Crear o editar un usuario crea el perfil de su rol. Un estudiante se carga con su legajo, y el DNI sale del CUIL. Con eso, un estudiante creado en Usuarios aparece en Inscripciones, y un docente aparece en Docentes aunque no tenga materias.
+  - **Menú según los permisos de la API (S2-10).** El menú lateral se arma con `GET /api/auth/permissions`. Si la API no responde, queda el menú del rol.
+  - **Auditoría de accesos (S2-9).** Backend de Joaquín (S2-47) y pantalla de Franco (S2-48), traídos del fork `0lypus`, que no tenía Pull Request. Registra los inicios de sesión, correctos y fallidos, y los accesos denegados. La consulta es solo para Secretaría, con filtros por fecha, usuario, evento y resultado.
+  - **Pantallas.** La campana quedó en el encabezado, el contenido de todas las pantallas comparte una columna centrada y el menú lateral se pliega debajo de 900 px.
+- **Ajustes al integrar la auditoría:**
+  - la pantalla usaba datos de ejemplo: se conectó con la API y se sacó la columna "Motivo", que la API no informa;
+  - un pedido sin sesión o con el token vencido ya no se registra como acceso denegado. Pasa cada vez que la pantalla renueva la sesión y llenaba el registro. Se registra a quien tiene sesión y no tiene permiso;
+  - un intento de ingreso con el correo vacío figuraba con el usuario en blanco: ahora figura como "Usuario desconocido".
+- **Lo que quedó afuera:** las pantallas de recuperación de contraseña del mismo fork, que usan datos simulados. Se retoman cuando el sistema esté desplegado y haya servidor de correo.
+- **Cambios que afectan a los demás equipos:**
+  - hay una tabla nueva, `AccessAuditEvents`: **hay que volver a correr `database/AcademicSystem.sql`**. No borra nada. Sin la tabla el sistema funciona igual, pero no registra la auditoría;
+  - `POST /api/users` con rol Student ahora pide `recordNumber`, que es el legajo, y responde 400 si falta;
+  - un usuario con perfil de docente no puede cambiar de rol, igual que ya pasaba con estudiantes y secretarios.
+- **Verificación**, con bases nuevas:
+  - ningún controller ni service usa la base directo; frontend y backend compilan, y el lint quedó en 0 errores;
+  - alta con perfil: 49 de 49; auditoría: 31 de 31; permisos: 4 de 4;
+  - la API del E1 respondió igual en 78 pedidos, sin contar el campo nuevo del legajo, y el bloqueo de cuenta sigue funcionando;
+  - regresión de API: E1, E3 y E4 25 de 25; E2 25 de 26. Ahora pasa la del docente nuevo, que aparece en la lista sin tener materias. La que queda es la esperada: los horarios los consulta cualquier usuario con sesión;
+  - asignación automática de comisiones: 18 de 18;
+  - en el navegador, con respuestas simuladas: formulario de usuarios 14 de 14, menú 14 de 14 y pantalla de auditoría 25 de 25;
+  - recorrido de punta a punta en el navegador, con la aplicación y la API reales: 22 de 22.
+
 ## Decisiones tomadas
 
 | Tema | Decisión |
@@ -208,20 +234,19 @@ Los cuatro equipos ya tienen su trabajo integrado en `development`.
 | Conexión a la base | `appsettings.json` apunta a `localhost\SQLEXPRESS`. Cada uno guarda su conexión con `dotnet user-secrets`. |
 | Seguridad | Todo endpoint pide sesión y cada controller declara su rol con `[Authorize(Roles = ...)]`. |
 | Frontend | Las llamadas a la API van en `src/services/`, un archivo por controller. No hay datos simulados en las pantallas. |
-| Recuperación de contraseña | Se posterga: no hay servidor SMTP. Mientras tanto, el secretario puede asignar una contraseña nueva editando al usuario. |
+| Recuperación de contraseña | Se posterga hasta que el sistema esté desplegado y haya servidor de correo. Mientras tanto, el secretario puede asignar una contraseña nueva editando al usuario. |
+| Usuarios y perfiles | El alta y la edición de usuarios crean el perfil del rol. Un estudiante se crea con su legajo (`recordNumber`), y el DNI sale del CUIL. |
+| Auditoría de accesos | Se registran los inicios de sesión, correctos y fallidos, y los accesos denegados de usuarios con sesión. No se registra el pedido sin sesión. |
 | Horarios de materias | Los consulta cualquier usuario con sesión (el estudiante también los necesita). Solo el Secretario los carga. |
 
-## Pendientes por equipo (al 13/11/2026)
+## Pendientes por equipo (al 18/11/2026)
 
 ### E1
 
-- Auditoría de accesos (S2-9): todavía no hay código.
-- Menú según los permisos de la API (S2-10): el menú sigue siendo una lista fija en `permisos.js`.
-- Recuperación de contraseña (S2-7), cuando haya SMTP.
-- Las pantallas de recuperación de contraseña y de consulta de auditoría están en el fork `0lypus`, con datos simulados y sin Pull Request: se integran cuando tengan backend.
+- Recuperación de contraseña (S2-7): se retoma cuando el sistema esté desplegado y haya servidor de correo. Las pantallas están en el fork `0lypus`, con datos simulados.
+- La consulta de auditoría devuelve todos los eventos: falta ponerle un límite y definir cuánto tiempo se guardan (S2-46).
 - Actualizar el paquete `System.Security.Cryptography.Pkcs` 9.0.11, que tiene vulnerabilidades conocidas.
-- Promover `testing` a `production` cuando se apruebe la versión del 13/11: `production` sigue en la del 06/10.
-- Unir el alta de usuarios con los perfiles: un estudiante o un docente creado en Usuarios todavía no aparece en las pantallas de Secretaría.
+- Promover `development` a `testing` y a `production`: `testing` quedó en la versión del 13/11 y `production` en la del 06/10.
 - Subir la versión aprobada al GitLab del instituto para el deploy: `https://git.icgb.com.ar/2do2026/gestion-academica`.
 
 ### E2
@@ -235,6 +260,7 @@ Los cuatro equipos ya tienen su trabajo integrado en `development`.
 
 - `useSubmit` no vuelve `isSubmitting` a `false` cuando la operación sale bien.
 - Bajas de planes y cursos.
+- El PR #12 (sección Materias, archivar y editar planes) se abrió el 18/11 contra `production` y todavía no se revisó. Los Pull Requests van contra `development`.
 
 ### E4
 
@@ -246,24 +272,25 @@ Los cuatro equipos ya tienen su trabajo integrado en `development`.
 
 - Hay dos controllers de estudiantes: el del E1 (`StudentsController`, `/api/students`) y el del E2 (`StudentController`, `/api/estudiantes`). Hay que decidir cuál queda para cada cosa.
 - Aprobar formalmente la tabla `SubjectSchedules` (horarios por materia y comisión), que entró con el E2.
+- Aprobar formalmente la tabla `AccessAuditEvents` (auditoría de accesos), que entró con el E1.
 
-## Números del proyecto (al 13/11/2026)
+## Números del proyecto (al 18/11/2026)
 
-En `development` hay 124 commits sin contar los merges:
+En `development` hay 132 commits sin contar los merges:
 
 | Integrante | Equipo | Commits |
 |---|---|---|
-| Tomás González | E1 | 24 |
+| Tomás González | E1 | 30 |
 | Alan Ordóñez | E2 | 22 |
 | Lorenzo Caro | E3 | 13 |
-| Joaquín Olmedo | E1 | 12 |
+| Joaquín Olmedo | E1 | 13 |
 | Agustín Coccia | E4 | 11 |
 | Federico Petta | E3 | 10 |
 | Damián Palacios | E1 | 7 |
 | Carlos Luque Heredia | E1 | 7 |
 | Facundo Pesa Giménez | E4 | 7 |
 | Esteban Soria | E4 | 5 |
-| Franco Petta | E1 | 4 |
+| Franco Petta | E1 | 5 |
 | Jeremías Herrera | E4 | 2 |
 
 En GitHub solo aparecen commits de 12 de los 19 integrantes. El trabajo de quienes no subieron nada desde su fork no se ve acá.
