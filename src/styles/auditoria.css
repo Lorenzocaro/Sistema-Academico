@@ -119,3 +119,10 @@
   font-size: 13px;
   color: var(--color-muted);
 }
+
+@media (max-width: 720px) {
+  /* En pantallas chicas, Buscar y Limpiar ocupan su propia fila. */
+  .auditoria-filtros .auditoria-botones {
+    grid-column: 1 / -1;
+  }
+}
